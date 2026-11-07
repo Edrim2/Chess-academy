@@ -1,13 +1,23 @@
-# Chess Academy Android build
+# Android Build
 
-Este projeto gera um APK Android usando Capacitor e GitHub Actions.
+Este projeto gera um APK utilizando **Capacitor** e **GitHub Actions**, fazendo o processo de compilação e distribuição do aplicativo mais facil.
 
-## Como usar no repositório
+## Como usar no repositório?
 
-1. Envie o conteúdo desta pasta para a raiz do repositório `Edrim2/Chess-academy`, mantendo a pasta `.github`.
-2. No GitHub, abra **Actions** e execute **Build Chess Academy APK** para testar. O APK aparecerá em **Artifacts** ao terminar.
-3. Para anexar automaticamente o APK aos **Assets** de uma Release, crie e envie uma tag nova, por exemplo `v0.2.0`. O workflow compila e anexa o APK à Release dessa tag.
+1. Envie o conteúdo desta pasta para a raiz do repositório `Edrim2/Chess-academy`, mantendo a pasta `.github` e sua estrutura.
+2. No GitHub, acesse a aba **Actions** e execute o workflow **Build Chess Academy APK** para iniciar uma compilação manual. Ao finalizar, o APK estará disponível na seção **Artifacts**.
+3. Para anexar automaticamente o APK aos **Assets** de uma Release, crie e envie uma nova tag, por exemplo `v0.2.0`. O workflow detectará a tag, iniciará a compilação e anexará o APK à Release correspondente.
+
+## Processo de compilação
+
+A compilação é realizada automaticamente pelo **GitHub Actions**, utilizando o **Capacitor** para gerar o aplicativo a partir dos arquivos desse projeto.
 
 ## Observação importante
 
-Este primeiro invólucro Android abre a versão publicada no GitHub Pages. Portanto, o GitHub Pages precisa estar publicado e o aparelho precisa de internet. Para uma versão totalmente offline, será necessário colocar o HTML e a biblioteca chess.js dentro de `src/` e compilar novamente.
+A versão atual do aplicativo funciona como um invólucro Android que carrega a versão publicada no GitHub Pages. Portanto, é necessário que o GitHub Pages esteja publicado e que o dispositivo tenha acesso à internet para utilizar o aplicativo.
+
+Para oferecer suporte completo ao funcionamento offline, será necessário incluir os arquivos HTML e a biblioteca `chess.js` diretamente no diretório `src/` utilizado pelo Capacitor e realizar uma nova compilação.
+
+Esse README será atualizado conforme novas versões forem lançadas.
+
+**OBS:** Por enquanto, esta é a única versão official por enquanto, uma versão para PC será feita no futuro.
