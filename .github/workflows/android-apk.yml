@@ -1,6 +1,7 @@
 name: Build Chess Academy APK
 
 'on':
+
   workflow_dispatch:
   push:
     tags:
