@@ -1,0 +1,6 @@
+{
+  "appId": "br.com.edrim2.chessacademy",
+  "appName": "Chess Academy",
+  "webDir": "www",
+  "bundledWebRuntime": false
+}
