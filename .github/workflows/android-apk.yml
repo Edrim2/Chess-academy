@@ -1,9 +1,11 @@
-name: Build Chess Academy APK
 
- 'on':
+name: Build Chess Academy Android APK
 
+'on':
   workflow_dispatch:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
 
@@ -12,17 +14,20 @@ permissions:
 
 jobs:
   build:
+    name: Compile Android APK
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repository
+      - name: Download repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Configure Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
 
-      - name: Set up Java
+      - name: Configure Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -31,32 +36,35 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Build web app
+      - name: Build web application
         run: npm run build
 
       - name: Generate Android project
         run: npx cap add android
 
-      - name: Sync Capacitor
+      - name: Synchronize Android
         run: npx cap sync android
 
-      - name: Build APK
+      - name: Compile APK
         working-directory: android
-        run: ./gradlew assembleDebug
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
 
       - name: Rename APK
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk Chess-Academy-${GITHUB_REF_NAME:-manual}.apk
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk Chess-Academy.apk
 
-      - name: Upload APK artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Chess-Academy-APK
-          path: Chess-Academy-*.apk
+          name: Chess-Academy-Android
+          path: Chess-Academy.apk
           retention-days: 30
 
-      - name: Attach APK to GitHub Release
+      - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: Chess-Academy-*.apk
+          files: Chess-Academy.apk
           
