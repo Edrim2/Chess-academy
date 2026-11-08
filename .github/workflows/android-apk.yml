@@ -1,14 +1,14 @@
 
-name: Chess Academy - Android APK
+name: Build Chess Academy APK
 
 'on':
-  push:
-    branches:
-      - main
   workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
