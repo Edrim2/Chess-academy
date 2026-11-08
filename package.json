@@ -1,17 +1,17 @@
 {
-  "name": "chess-academy-android",
-  "version": "0.2.0",
-  "private": true,
-  "description": "Android wrapper for Chess Academy",
-  "scripts": {
-    "build: "mkdir -p www && cp index.html www/index.html",
-    "cap:sync": "cap sync android"
-  },
-  "dependencies": {
-    "@capacitor/android": "^7.6.10",
-    "@capacitor/core": "^7.4.3"
-  },
-  "devDependencies": {
-    "@capacitor/cli": "^7.4.3"
-  }
+"name": "chess-academy-android",
+"version": "0.2.0",
+"private": true,
+"description": "Android wrapper for Chess Academy",
+"scripts": {
+"build": "mkdir -p www && cp index.html www/index.html",
+"cap:sync": "cap sync android"
+},
+"dependencies": {
+"@capacitor/android": "^7.6.10",
+"@capacitor/core": "^7.4.3"
+},
+"devDependencies": {
+"@capacitor/cli": "^7.4.3"
+}
 }
