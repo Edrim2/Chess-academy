@@ -82,9 +82,16 @@
 
     .selected { background: #e8c34c !important; }
 
-    .possible { outline: 4px solid #a5c4a0; outline-offset: -4px; }
+    .possible {
+      outline: 4px solid #a5c4a0;
+      outline-offset: -4px;
+    }
 
-    .last-move { box-shadow: inset 0 0 0 4px #e8c34c88; }
+    .last-move {
+      box-shadow: inset 0 0 0 4px #e8c34c88;
+    }
+
+    .capture { outline-color: #e8a0a0; }
 
     button, select { font: inherit; }
 
@@ -102,7 +109,10 @@
       background: #252e40;
       color: white;
       font-weight: bold;
+      cursor: pointer;
     }
+
+    .action:active { opacity: .75; }
 
     .primary {
       background: #4269b2;
@@ -154,19 +164,108 @@
       color: #707b8e;
       font-size: 12px;
     }
+
+    /* DEVELOPER MODE */
+
+    .dev-version {
+      color: #8bb8ff;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .dev-panel {
+      background: #101827;
+      border: 1px solid #4269b2;
+    }
+
+    .dev-panel[hidden] { display: none !important; }
+
+    .dev-title {
+      color: #8bb8ff;
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .dev-label {
+      color: #8495ad;
+      font-size: 11px;
+      letter-spacing: 1px;
+    }
+
+    .dev-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 9px;
+    }
+
+    .dev-stat {
+      background: #192538;
+      border: 1px solid #30415c;
+      border-radius: 9px;
+      padding: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .dev-stat small {
+      display: block;
+      color: #8495ad;
+      margin-bottom: 7px;
+    }
+
+    .dev-stat strong { color: #e6efff; }
+
+    .dev-actions {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .dev-log {
+      background: #080d15;
+      border: 1px solid #30415c;
+      color: #a9d5b0;
+      padding: 12px;
+      border-radius: 8px;
+      font: 12px/1.5 monospace;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .dev-badge {
+      color: #83b2ff;
+      font-size: 11px;
+      letter-spacing: 1px;
+    }
+
+    @keyframes devPulse {
+      0% { box-shadow: 0 0 0 0 #4285ff; }
+      50% { box-shadow: 0 0 22px 5px #4285ff; }
+      100% { box-shadow: 0 0 0 0 transparent; }
+    }
+
+    .dev-pulse {
+      animation: devPulse 1s ease-in-out 2;
+    }
   </style>
 </head>
 
 <body>
+
   <header>
     <h1>♟ Chess Academy</h1>
     <p>Aprenda, pratique e descubra o mundo do xadrez.</p>
   </header>
 
   <main>
+
     <section class="panel">
       <h2>Tabuleiro</h2>
+
       <div id="board" class="board"></div>
+
       <div id="status">Carregando partida...</div>
 
       <div class="controls">
@@ -182,6 +281,7 @@
     <section class="panel">
       <h2>Adversário</h2>
       <label for="level">Dificuldade</label>
+
       <select id="level">
         <option value="1">Nível 1 - Iniciante</option>
         <option value="2">Nível 2 - Fácil</option>
@@ -201,10 +301,83 @@
       <h2>Histórico de movimentos</h2>
       <div id="moves"></div>
     </section>
+
+    <!-- DEVELOPER CONSOLE -->
+
+    <section id="developer-panel" class="panel dev-panel" hidden>
+
+      <div class="dev-title">⚙ DEVELOPER CONSOLE</div>
+      <p class="dev-label">CHESS ACADEMY INTERNAL TOOLS</p>
+      <p id="dev-status" class="dev-badge">DEVELOPER MODE ACTIVE</p>
+
+      <div class="dev-grid">
+
+        <div class="dev-stat">
+          <small>Estado da partida</small>
+          <strong id="dev-game-state">Aguardando</strong>
+        </div>
+
+        <div class="dev-stat">
+          <small>Movimentos legais</small>
+          <strong id="dev-legal-count">0</strong>
+        </div>
+
+        <div class="dev-stat">
+          <small>Turno atual</small>
+          <strong id="dev-turn">Brancas</strong>
+        </div>
+
+        <div class="dev-stat">
+          <small>Nível da IA</small>
+          <strong id="dev-ai-level">3</strong>
+        </div>
+
+        <div class="dev-stat">
+          <small>Memória JS</small>
+          <strong id="dev-memory">N/D</strong>
+        </div>
+
+        <div class="dev-stat">
+          <small>Tempo ativo</small>
+          <strong id="dev-uptime">0s</strong>
+        </div>
+
+      </div>
+
+      <div class="dev-actions">
+        <button class="action" id="dev-refresh">Atualizar diagnóstico</button>
+        <button class="action" id="dev-test-moves">Testar movimentos</button>
+        <button class="action" id="dev-test-animation">Testar animação</button>
+        <button class="action" id="dev-test-sound">Testar som</button>
+        <button class="action" id="dev-export">Exportar relatório</button>
+        <button class="action" id="dev-clear-log">Limpar console</button>
+      </div>
+
+      <h2 style="margin-top:18px">System Logs</h2>
+
+      <div id="dev-log" class="dev-log" aria-live="polite">
+        Developer Console iniciado.
+      </div>
+
+      <button class="action" id="dev-close"
+              style="width:100%;margin-top:12px">
+        DESATIVAR DEVELOPER MODE
+      </button>
+
+    </section>
+
   </main>
 
-  <footer>Chess Academy · Aprender é o primeiro movimento.</footer>
+  <footer>
+    Chess Academy ·
+    <span id="app-version" class="dev-version"
+          role="button" tabindex="0">
+      v0.6.0
+    </span>
+    · Aprender é o primeiro movimento.
+  </footer>
 
   <script type="module" src="./app.js"></script>
+
 </body>
 </html>
