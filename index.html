@@ -1,35 +1,72 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#10131b">
   <title>Chess Academy</title>
 
   <style>
+    :root {
+      color-scheme: dark;
+      --page: #10131b;
+      --header: #151925;
+      --panel: #191f2c;
+      --panel-border: #2b3343;
+      --text: #f1f3f8;
+      --muted: #969fb1;
+      --subtle: #d2d8e5;
+      --control: #252e40;
+      --control-border: #394458;
+      --field: #202838;
+      --line: #30394a;
+      --accent: #8bb8ff;
+      --status: #a8c7ff;
+      --overlay: #050810d9;
+      --shadow: #0007;
+    }
+
     * { box-sizing: border-box; }
 
     body {
       margin: 0;
-      background: #10131b;
-      color: #f1f3f8;
+      background: var(--page);
+      color: var(--text);
       font-family: Arial, sans-serif;
+      transition: background-color .2s ease, color .2s ease;
+    }
+
+    body.theme-light {
+      color-scheme: light;
+      --page: #f2f5fa;
+      --header: #ffffff;
+      --panel: #ffffff;
+      --panel-border: #d8deea;
+      --text: #1b2433;
+      --muted: #667085;
+      --subtle: #465166;
+      --control: #eef2f8;
+      --control-border: #ccd5e2;
+      --field: #f7f9fc;
+      --line: #e1e6ee;
+      --accent: #315fa8;
+      --status: #315fa8;
+      --overlay: #152033a6;
+      --shadow: #24334a24;
     }
 
     header {
-      padding: 20px;
-      border-bottom: 1px solid #292e3b;
-      background: #151925;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px max(20px, env(safe-area-inset-right)) 18px max(20px, env(safe-area-inset-left));
+      border-bottom: 1px solid var(--panel-border);
+      background: var(--header);
     }
 
-    header h1 { margin: 0; font-size: 23px; }
-
-    header p {
-      color: #969fb1;
-      margin-bottom: 0;
-      font-size: 13px;
-    }
+    .brand h1 { margin: 0; font-size: 23px; }
+    .brand p { color: var(--muted); margin: 6px 0 0; font-size: 13px; }
 
     main {
       width: 100%;
@@ -39,11 +76,13 @@
     }
 
     .panel {
-      background: #191f2c;
-      border: 1px solid #2b3343;
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
       border-radius: 15px;
       padding: 14px;
       margin-bottom: 15px;
+      box-shadow: 0 8px 26px var(--shadow);
+      transition: background-color .2s ease, border-color .2s ease, color .2s ease;
     }
 
     .board {
@@ -69,31 +108,32 @@
 
     .light { background: #e8e1d2; }
     .dark { background: #77927f; }
-
-    .white-piece {
-      color: white;
-      text-shadow: 1px 2px 2px #222;
-    }
-
-    .black-piece {
-      color: #17191e;
-      text-shadow: 1px 1px 1px #fff6;
-    }
-
+    .white-piece { color: white; text-shadow: 1px 2px 2px #222; }
+    .black-piece { color: #17191e; text-shadow: 1px 1px 1px #fff6; }
     .selected { background: #e8c34c !important; }
-
-    .possible {
-      outline: 4px solid #a5c4a0;
-      outline-offset: -4px;
-    }
-
-    .last-move {
-      box-shadow: inset 0 0 0 4px #e8c34c88;
-    }
-
+    .possible { outline: 4px solid #a5c4a0; outline-offset: -4px; }
+    .last-move { box-shadow: inset 0 0 0 4px #e8c34c88; }
     .capture { outline-color: #e8a0a0; }
 
     button, select { font: inherit; }
+
+    .settings-trigger {
+      flex: 0 0 auto;
+      width: 46px;
+      height: 46px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--control-border);
+      border-radius: 13px;
+      background: var(--control);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 22px;
+      transition: transform .18s ease, border-color .18s ease;
+    }
+
+    .settings-trigger:hover { transform: rotate(20deg); border-color: var(--accent); }
+    .settings-trigger:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 
     .controls {
       display: grid;
@@ -104,141 +144,182 @@
 
     .action {
       padding: 12px;
-      border: 1px solid #394458;
+      border: 1px solid var(--control-border);
       border-radius: 9px;
-      background: #252e40;
-      color: white;
+      background: var(--control);
+      color: var(--text);
       font-weight: bold;
       cursor: pointer;
     }
 
     .action:active { opacity: .75; }
-
-    .primary {
-      background: #4269b2;
-      border-color: #4269b2;
-    }
-
+    .primary { background: #4269b2; border-color: #4269b2; color: #fff; }
     h2 { font-size: 16px; margin: 0 0 12px; }
 
-    #status {
-      color: #a8c7ff;
-      font-size: 14px;
-      margin-top: 12px;
-    }
-
-    #lia-message, #lesson {
-      color: #d2d8e5;
-      line-height: 1.5;
-      font-size: 14px;
-    }
-
-    #moves {
-      max-height: 180px;
-      overflow-y: auto;
-    }
+    #status { color: var(--status); font-size: 14px; margin-top: 12px; }
+    #lia-message, #lesson { color: var(--subtle); line-height: 1.5; font-size: 14px; }
+    #moves { max-height: 180px; overflow-y: auto; }
 
     .move-row {
       display: grid;
       grid-template-columns: 40px 1fr 1fr;
       padding: 7px;
-      border-bottom: 1px solid #30394a;
+      border-bottom: 1px solid var(--line);
       font-size: 14px;
     }
 
-    .move-row span:first-child { color: #8e9bb0; }
+    .move-row span:first-child { color: var(--muted); }
 
     select {
       width: 100%;
       padding: 10px;
       border-radius: 8px;
-      border: 1px solid #394458;
-      background: #252e40;
-      color: white;
+      border: 1px solid var(--control-border);
+      background: var(--control);
+      color: var(--text);
       margin-top: 8px;
     }
 
-    footer {
-      text-align: center;
-      padding: 20px;
-      color: #707b8e;
-      font-size: 12px;
+    footer { text-align: center; padding: 20px; color: var(--muted); font-size: 12px; }
+
+    /* Settings center */
+    .settings-modal[hidden], [hidden] { display: none !important; }
+
+    .settings-modal {
+      position: fixed;
+      z-index: 20;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+      background: var(--overlay);
+      backdrop-filter: blur(7px);
     }
 
-    /* DEVELOPER MODE */
+    .settings-dialog {
+      width: min(100%, 620px);
+      max-height: min(820px, 94dvh);
+      overflow: auto;
+      border: 1px solid var(--panel-border);
+      border-radius: 20px;
+      background: var(--panel);
+      color: var(--text);
+      box-shadow: 0 24px 80px var(--shadow);
+    }
 
-    .dev-version {
-      color: #8bb8ff;
+    .settings-heading {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 22px 22px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .settings-heading h2 { margin: 0; font-size: 21px; }
+    .settings-heading p { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+
+    .settings-close {
+      width: 38px;
+      height: 38px;
+      flex: 0 0 auto;
+      border: 1px solid var(--control-border);
+      border-radius: 10px;
+      color: var(--text);
+      background: var(--control);
+      font-size: 21px;
       cursor: pointer;
-      user-select: none;
     }
 
-    .dev-panel {
-      background: #101827;
-      border: 1px solid #4269b2;
+    .settings-tabs { display: flex; gap: 8px; padding: 14px 22px 0; }
+    .settings-tab {
+      flex: 1;
+      padding: 11px;
+      border: 1px solid var(--control-border);
+      border-radius: 10px;
+      background: transparent;
+      color: var(--muted);
+      font-weight: 700;
+      cursor: pointer;
     }
 
-    .dev-panel[hidden] { display: none !important; }
+    .settings-tab.active { background: var(--control); color: var(--text); border-color: var(--accent); }
+    .settings-panel { padding: 12px 22px 22px; }
+    .settings-panel[hidden] { display: none !important; }
 
-    .dev-title {
-      color: #8bb8ff;
-      font-size: 18px;
-      font-weight: bold;
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 15px 0;
+      border-bottom: 1px solid var(--line);
     }
 
-    .dev-label {
-      color: #8495ad;
-      font-size: 11px;
-      letter-spacing: 1px;
-    }
+    .setting-copy strong { display: block; font-size: 14px; }
+    .setting-copy small { display: block; margin-top: 5px; color: var(--muted); line-height: 1.4; }
+    .setting-control { min-width: 130px; }
+    .setting-control select { margin: 0; }
 
-    .dev-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 9px;
-    }
-
-    .dev-stat {
-      background: #192538;
-      border: 1px solid #30415c;
-      border-radius: 9px;
-      padding: 12px;
-      overflow-wrap: anywhere;
-    }
-
-    .dev-stat small {
+    .theme-options { display: flex; gap: 8px; }
+    .theme-option { position: relative; }
+    .theme-option input { position: absolute; opacity: 0; pointer-events: none; }
+    .theme-option span {
       display: block;
-      color: #8495ad;
-      margin-bottom: 7px;
+      padding: 9px 11px;
+      border: 1px solid var(--control-border);
+      border-radius: 9px;
+      background: var(--control);
+      color: var(--text);
+      cursor: pointer;
+      white-space: nowrap;
     }
 
-    .dev-stat strong { color: #e6efff; }
+    .theme-option input:checked + span { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 
-    .dev-actions {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
-      margin-top: 12px;
+    .switch {
+      width: 48px;
+      height: 28px;
+      position: relative;
+      flex: 0 0 auto;
     }
 
-    .dev-log {
-      background: #080d15;
-      border: 1px solid #30415c;
-      color: #a9d5b0;
-      padding: 12px;
-      border-radius: 8px;
-      font: 12px/1.5 monospace;
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-      max-height: 200px;
-      overflow-y: auto;
+    .switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+    .switch-track { position: absolute; inset: 0; border-radius: 20px; background: #707b8e; transition: background .2s ease; pointer-events: none; }
+    .switch-track::after { content: ""; position: absolute; width: 20px; height: 20px; left: 4px; top: 4px; border-radius: 50%; background: white; transition: transform .2s ease; }
+    .switch input:checked + .switch-track { background: #4269b2; }
+    .switch input:checked + .switch-track::after { transform: translateX(20px); }
+
+    .admin-actions { display: grid; gap: 10px; padding-top: 8px; }
+    .admin-actions .action { width: 100%; text-align: left; }
+    .admin-description { margin: 0 0 8px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+    #settings-import-file { display: none; }
+
+    #settings-status {
+      min-height: 22px;
+      margin: 14px 22px 18px;
+      padding: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
     }
 
-    .dev-badge {
-      color: #83b2ff;
-      font-size: 11px;
-      letter-spacing: 1px;
-    }
+    #settings-status[data-type="success"] { color: #39a675; }
+    #settings-status[data-type="error"] { color: #d44f59; }
+
+    /* Developer mode */
+    .dev-version { color: var(--accent); cursor: pointer; user-select: none; }
+    .dev-panel { background: var(--panel); border-color: #4269b2; }
+    .dev-panel[hidden] { display: none !important; }
+    .dev-title { color: var(--accent); font-size: 18px; font-weight: bold; }
+    .dev-label { color: var(--muted); font-size: 11px; letter-spacing: 1px; }
+    .dev-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; }
+    .dev-stat { background: var(--field); border: 1px solid var(--control-border); border-radius: 9px; padding: 12px; overflow-wrap: anywhere; }
+    .dev-stat small { display: block; color: var(--muted); margin-bottom: 7px; }
+    .dev-stat strong { color: var(--text); }
+    .dev-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px; }
+    .dev-log { background: var(--page); border: 1px solid var(--control-border); color: #55ae6c; padding: 12px; border-radius: 8px; font: 12px/1.5 monospace; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 200px; overflow-y: auto; }
+    .dev-badge { color: var(--accent); font-size: 11px; letter-spacing: 1px; }
 
     @keyframes devPulse {
       0% { box-shadow: 0 0 0 0 #4285ff; }
@@ -246,28 +327,52 @@
       100% { box-shadow: 0 0 0 0 transparent; }
     }
 
-    .dev-pulse {
-      animation: devPulse 1s ease-in-out 2;
+    .dev-pulse { animation: devPulse 1s ease-in-out 2; }
+    .app-animations-disabled *, .app-animations-disabled *::before, .app-animations-disabled *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
+      transition-duration: 0.01ms !important;
+    }
+
+    @media (max-width: 520px) {
+      header { padding: 15px; }
+      .brand h1 { font-size: 20px; }
+      .brand p { max-width: 270px; line-height: 1.4; }
+      main { padding: 12px; }
+      .settings-modal { padding-left: 10px; padding-right: 10px; }
+      .settings-dialog { max-height: 96dvh; border-radius: 16px; }
+      .settings-heading { padding: 18px 16px 14px; }
+      .settings-tabs { padding-left: 16px; padding-right: 16px; }
+      .settings-panel { padding: 10px 16px 18px; }
+      #settings-status { margin-left: 16px; margin-right: 16px; }
+      .setting-row { align-items: flex-start; }
+      .setting-control { min-width: auto; }
+      .theme-options { flex-direction: column; }
+      .theme-option span { text-align: center; }
+      .dev-actions { grid-template-columns: 1fr; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; }
     }
   </style>
 </head>
 
-<body>
-
+<body class="theme-dark">
   <header>
-    <h1>♟ Chess Academy</h1>
-    <p>Aprenda, pratique e descubra o mundo do xadrez.</p>
+    <div class="brand">
+      <h1>♟ Chess Academy</h1>
+      <p>Aprenda, pratique e descubra o mundo do xadrez.</p>
+    </div>
+    <button id="settings-button" class="settings-trigger" type="button" aria-label="Abrir configurações" title="Configurações">⚙</button>
   </header>
 
   <main>
-
     <section class="panel">
       <h2>Tabuleiro</h2>
-
       <div id="board" class="board"></div>
-
-      <div id="status">Carregando partida...</div>
-
+      <div id="status" role="status">Carregando partida...</div>
       <div class="controls">
         <button class="action primary" id="new-game">Nova partida</button>
         <button class="action" id="undo">Desfazer</button>
@@ -281,7 +386,6 @@
     <section class="panel">
       <h2>Adversário</h2>
       <label for="level">Dificuldade</label>
-
       <select id="level">
         <option value="1">Nível 1 - Iniciante</option>
         <option value="2">Nível 2 - Fácil</option>
@@ -291,82 +395,38 @@
       </select>
     </section>
 
-    <section class="panel">
+    <section id="lia-panel" class="panel">
       <h2>👩‍🏫 Lia, sua professora</h2>
       <p id="lia-message">Preparando a aula...</p>
       <p id="lesson"></p>
     </section>
 
-    <section class="panel">
+    <section id="history-panel" class="panel">
       <h2>Histórico de movimentos</h2>
       <div id="moves"></div>
     </section>
 
     <!-- UPDATE SYSTEM -->
-
-    <section id="update-panel" class="panel"
-      style="display:none;border-color:#4269b2">
-
+    <section id="update-panel" class="panel" style="display:none;border-color:#4269b2">
       <h2>🚀 Atualização do Chess Academy</h2>
-
-      <p id="update-message">
-        Verificando atualizações...
-      </p>
-
-      <button class="action primary" id="update-download"
-        style="display:none;width:100%">
-        Baixar nova versão
-      </button>
-
-      <button class="action" id="update-check"
-        style="width:100%;margin-top:8px">
-        Verificar novamente
-      </button>
-
+      <p id="update-message">Verificando atualizações...</p>
+      <button class="action primary" id="update-download" style="display:none;width:100%">Baixar nova versão</button>
+      <button class="action" id="update-check" style="width:100%;margin-top:8px">Verificar novamente</button>
     </section>
 
     <!-- DEVELOPER CONSOLE -->
-
     <section id="developer-panel" class="panel dev-panel" hidden>
-
       <div class="dev-title">⚙ DEVELOPER CONSOLE</div>
       <p class="dev-label">CHESS ACADEMY INTERNAL TOOLS</p>
       <p id="dev-status" class="dev-badge">DEVELOPER MODE ACTIVE</p>
-
       <div class="dev-grid">
-
-        <div class="dev-stat">
-          <small>Estado da partida</small>
-          <strong id="dev-game-state">Aguardando</strong>
-        </div>
-
-        <div class="dev-stat">
-          <small>Movimentos legais</small>
-          <strong id="dev-legal-count">0</strong>
-        </div>
-
-        <div class="dev-stat">
-          <small>Turno atual</small>
-          <strong id="dev-turn">Brancas</strong>
-        </div>
-
-        <div class="dev-stat">
-          <small>Nível da IA</small>
-          <strong id="dev-ai-level">3</strong>
-        </div>
-
-        <div class="dev-stat">
-          <small>Memória JS</small>
-          <strong id="dev-memory">N/D</strong>
-        </div>
-
-        <div class="dev-stat">
-          <small>Tempo ativo</small>
-          <strong id="dev-uptime">0s</strong>
-        </div>
-
+        <div class="dev-stat"><small>Estado da partida</small><strong id="dev-game-state">Aguardando</strong></div>
+        <div class="dev-stat"><small>Movimentos legais</small><strong id="dev-legal-count">0</strong></div>
+        <div class="dev-stat"><small>Turno atual</small><strong id="dev-turn">Brancas</strong></div>
+        <div class="dev-stat"><small>Nível da IA</small><strong id="dev-ai-level">3</strong></div>
+        <div class="dev-stat"><small>Memória JS</small><strong id="dev-memory">N/D</strong></div>
+        <div class="dev-stat"><small>Tempo ativo</small><strong id="dev-uptime">0s</strong></div>
       </div>
-
       <div class="dev-actions">
         <button class="action" id="dev-refresh">Atualizar diagnóstico</button>
         <button class="action" id="dev-test-moves">Testar movimentos</button>
@@ -375,32 +435,78 @@
         <button class="action" id="dev-export">Exportar relatório</button>
         <button class="action" id="dev-clear-log">Limpar console</button>
       </div>
-
       <h2 style="margin-top:18px">System Logs</h2>
-
-      <div id="dev-log" class="dev-log" aria-live="polite">
-        Developer Console iniciado.
-      </div>
-
-      <button class="action" id="dev-close"
-        style="width:100%;margin-top:12px">
-        DESATIVAR DEVELOPER MODE
-      </button>
-
+      <div id="dev-log" class="dev-log" aria-live="polite">Developer Console iniciado.</div>
+      <button class="action" id="dev-close" style="width:100%;margin-top:12px">DESATIVAR DEVELOPER MODE</button>
     </section>
-
   </main>
 
   <footer>
-    Chess Academy ·
-    <span id="app-version" class="dev-version"
-      role="button" tabindex="0">
-      v0.6.0
-    </span>
-    · Aprender é o primeiro movimento.
+    Chess Academy · <span id="app-version" class="dev-version" role="button" tabindex="0">v0.6.0</span> · Aprender é o primeiro movimento.
   </footer>
 
-  <script type="module" src="./app.js"></script>
+  <div id="settings-modal" class="settings-modal" role="presentation" hidden>
+    <section class="settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title" aria-describedby="settings-subtitle">
+      <div class="settings-heading">
+        <div>
+          <h2 id="settings-title">Central de configurações</h2>
+          <p id="settings-subtitle">Personalize sua experiência no Chess Academy.</p>
+        </div>
+        <button id="settings-close" class="settings-close" type="button" aria-label="Fechar configurações">×</button>
+      </div>
 
+      <div class="settings-tabs" role="tablist" aria-label="Seções de configurações">
+        <button class="settings-tab active" id="settings-tab-general" type="button" role="tab" aria-selected="true" aria-controls="settings-panel-general" data-tab="general">Geral</button>
+        <button class="settings-tab" id="settings-tab-admin" type="button" role="tab" aria-selected="false" aria-controls="settings-panel-admin" data-tab="admin">ADM Configure</button>
+      </div>
+
+      <div id="settings-panel-general" class="settings-panel" role="tabpanel" aria-labelledby="settings-tab-general" data-panel="general">
+        <div class="setting-row">
+          <div class="setting-copy"><strong>Tema</strong><small>Escolha a aparência da interface.</small></div>
+          <div class="setting-control theme-options">
+            <label class="theme-option"><input type="radio" name="settings-theme" value="dark"><span>🌙 Escuro</span></label>
+            <label class="theme-option"><input type="radio" name="settings-theme" value="light"><span>☀️ Claro</span></label>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-copy"><strong>Dificuldade padrão</strong><small>Nível aplicado ao iniciar o aplicativo.</small></div>
+          <div class="setting-control">
+            <select id="settings-difficulty" aria-label="Dificuldade padrão">
+              <option value="1">Nível 1 · Iniciante</option>
+              <option value="2">Nível 2 · Fácil</option>
+              <option value="3">Nível 3 · Intermediário</option>
+              <option value="4">Nível 4 · Avançado</option>
+              <option value="5">Nível 5 · Difícil</option>
+            </select>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-copy"><strong>Mostrar Lia</strong><small>Exibe a professora e suas mensagens.</small></div>
+          <label class="switch" aria-label="Mostrar Lia"><input id="settings-show-lia" type="checkbox"><span class="switch-track"></span></label>
+        </div>
+        <div class="setting-row">
+          <div class="setting-copy"><strong>Mostrar histórico</strong><small>Exibe a lista de movimentos da partida.</small></div>
+          <label class="switch" aria-label="Mostrar histórico"><input id="settings-show-history" type="checkbox"><span class="switch-track"></span></label>
+        </div>
+        <div class="setting-row">
+          <div class="setting-copy"><strong>Animações</strong><small>Ativa transições e efeitos visuais.</small></div>
+          <label class="switch" aria-label="Ativar animações"><input id="settings-animations" type="checkbox"><span class="switch-track"></span></label>
+        </div>
+      </div>
+
+      <div id="settings-panel-admin" class="settings-panel" role="tabpanel" aria-labelledby="settings-tab-admin" data-panel="admin" hidden>
+        <p class="admin-description">Gerencie uma cópia das suas preferências ou restaure os padrões do aplicativo. Estas ações não alteram o Developer Console nem o sistema de atualização.</p>
+        <div class="admin-actions">
+          <button id="settings-export" class="action" type="button">⬇ Exportar configurações em JSON</button>
+          <button id="settings-import" class="action" type="button">⬆ Importar configurações de arquivo</button>
+          <input id="settings-import-file" type="file" accept="application/json,.json">
+          <button id="settings-restore" class="action" type="button">↺ Restaurar configurações padrão</button>
+        </div>
+      </div>
+      <p id="settings-status" role="status" aria-live="polite"></p>
+    </section>
+  </div>
+
+  <script type="module" src="./app.js"></script>
 </body>
 </html>
