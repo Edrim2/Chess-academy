@@ -1,156 +1,860 @@
-<!doctype html>
+
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#10131b">
 <title>Chess Academy</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/1.4.0/chess.min.js"></script>
+
 <style>
-:root{--bg:#10131b;--panel:#191f2b;--panel2:#222b3a;--text:#edf2fa;--muted:#a9b4c5;--accent:#7aa7ff;--light:#e8edf5;--dark:#7892ad;--gold:#f5c96b}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#1d2940,var(--bg) 55%);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh}
-header{padding:22px 16px 12px;text-align:center}h1{margin:0;font-size:clamp(26px,5vw,40px);letter-spacing:.5px}header p{margin:6px 0;color:var(--muted)}
-main{width:min(1120px,96vw);margin:0 auto 30px;display:grid;grid-template-columns:minmax(280px,620px) minmax(260px,1fr);gap:18px}
-.panel{background:rgba(25,31,43,.96);border:1px solid #303b4e;border-radius:18px;padding:15px;box-shadow:0 14px 38px #0005}
-.board-wrap{width:100%;max-width:600px;margin:auto}.board{display:grid;grid-template-columns:repeat(8,1fr);aspect-ratio:1;border:5px solid #303b4e;border-radius:9px;overflow:hidden}
-.square{border:0;display:grid;place-items:center;position:relative;padding:0;font-size:clamp(25px,6.5vw,56px);line-height:1;cursor:pointer;user-select:none}
-.square.light{background:var(--light)}.square.dark{background:var(--dark)}.square.selected{box-shadow:inset 0 0 0 5px var(--gold)}.square.last{background:#c6c86b}.square.legal:after{content:"";position:absolute;width:24%;height:24%;border-radius:50%;background:#26384b66}.square.capture:after{content:"";position:absolute;inset:4px;border:4px solid #bd5757;border-radius:50%}
-.piece{filter:drop-shadow(0 2px 1px #0005);z-index:1}.coords{position:absolute;left:3px;bottom:1px;font-size:10px;font-weight:700;color:#26384b;opacity:.7}
-.controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}.controls button,select,.action{background:var(--panel2);color:var(--text);border:1px solid #3b4960;border-radius:10px;padding:10px 12px;font:inherit}
-button{cursor:pointer}button:hover,.action:hover{border-color:var(--accent)}button:disabled{opacity:.45;cursor:not-allowed}
-.status{margin:12px 0 0;padding:11px;border-radius:10px;background:#111722;color:var(--muted);min-height:44px}
-h2{font-size:19px;margin:0 0 12px}.section{margin-bottom:17px}.row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.row label{color:var(--muted);font-size:14px}
-.assistant{display:flex;gap:12px;align-items:flex-start;background:#202a3b;padding:13px;border-radius:13px}.avatar{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#7aa7ff,#c5a2ff);font-size:27px;flex:none}
-.assistant strong{display:block;margin-bottom:4px}.assistant p{margin:0;color:#d4deed;line-height:1.45}
-.moves{max-height:180px;overflow:auto;background:#111722;border-radius:10px;padding:9px;color:var(--muted);font-family:ui-monospace,monospace;font-size:13px}
-.move-row{display:grid;grid-template-columns:32px 1fr 1fr;gap:8px;padding:3px 2px}.move-row span:first-child{color:#75849a}
-.hint{background:#172638;border:1px solid #304a6a;padding:11px;border-radius:10px;color:#dbe8fa;line-height:1.45}
-.small{font-size:12px;color:var(--muted);line-height:1.45}.primary{background:#477fe0!important;border-color:#477fe0!important;color:white!important}
-@media(max-width:760px){main{grid-template-columns:1fr;width:min(620px,96vw)}.panel{padding:12px}header{padding-top:16px}.square{font-size:clamp(25px,10vw,52px)}}
+:root {
+  --bg: #10131b;
+  --panel: #191f2b;
+  --panel2: #222b3a;
+  --text: #edf2fa;
+  --muted: #a9b4c5;
+  --accent: #7aa7ff;
+  --light: #e8edf5;
+  --dark: #7892ad;
+  --gold: #f5c96b;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: radial-gradient(circle at top, #1d2940, var(--bg) 55%);
+  color: var(--text);
+  font-family: system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+header {
+  text-align: center;
+  padding: 22px 12px;
+}
+
+header h1 {
+  margin: 0;
+  font-size: clamp(27px, 5vw, 40px);
+}
+
+header p {
+  color: var(--muted);
+  margin: 6px;
+}
+
+main {
+  width: min(1120px, 96vw);
+  margin: auto;
+  display: grid;
+  grid-template-columns: minmax(280px, 620px) minmax(260px, 1fr);
+  gap: 18px;
+  padding-bottom: 30px;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid #303b4e;
+  border-radius: 18px;
+  padding: 15px;
+  box-shadow: 0 14px 38px #0005;
+}
+
+.board-wrap {
+  width: 100%;
+  max-width: 600px;
+  margin: auto;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  aspect-ratio: 1;
+  border: 5px solid #303b4e;
+  border-radius: 9px;
+  overflow: hidden;
+}
+
+.square {
+  border: 0;
+  display: grid;
+  place-items: center;
+  position: relative;
+  padding: 0;
+  font-size: clamp(25px, 6.5vw, 56px);
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+}
+
+.square.light { background: var(--light); }
+.square.dark { background: var(--dark); }
+
+.square.selected {
+  box-shadow: inset 0 0 0 5px var(--gold);
+}
+
+.square.last { background: #c6c86b; }
+
+.square.legal::after {
+  content: "";
+  position: absolute;
+  width: 24%;
+  height: 24%;
+  border-radius: 50%;
+  background: #26384b66;
+}
+
+.square.capture::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border: 4px solid #bd5757;
+  border-radius: 50%;
+}
+
+.piece {
+  z-index: 1;
+  filter: drop-shadow(0 2px 1px #0005);
+}
+
+.coords {
+  position: absolute;
+  left: 3px;
+  bottom: 1px;
+  font-size: 10px;
+  font-weight: bold;
+  color: #26384b;
+}
+
+.controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 13px;
+}
+
+button, select {
+  background: var(--panel2);
+  color: var(--text);
+  border: 1px solid #3b4960;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font: inherit;
+}
+
+button { cursor: pointer; }
+
+button:hover {
+  border-color: var(--accent);
+}
+
+button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.primary {
+  background: #477fe0;
+  border-color: #477fe0;
+  color: white;
+}
+
+.status, .hint, .moves {
+  background: #111722;
+  padding: 12px;
+  border-radius: 10px;
+  margin-top: 12px;
+  color: var(--muted);
+}
+
+.moves {
+  max-height: 180px;
+  overflow-y: auto;
+  font-family: monospace;
+  font-size: 13px;
+}
+
+.move-row {
+  display: grid;
+  grid-template-columns: 32px 1fr 1fr;
+  gap: 8px;
+  padding: 3px;
+}
+
+.section { margin-bottom: 18px; }
+
+h2 {
+  font-size: 19px;
+  margin: 0 0 12px;
+}
+
+.assistant {
+  display: flex;
+  gap: 12px;
+  background: #202a3b;
+  padding: 13px;
+  border-radius: 13px;
+}
+
+.avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #7aa7ff, #c5a2ff);
+  font-size: 27px;
+  flex: none;
+}
+
+.small {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+@media(max-width: 760px) {
+  main {
+    grid-template-columns: 1fr;
+    width: min(620px, 96vw);
+  }
+
+  .square {
+    font-size: clamp(25px, 10vw, 52px);
+  }
+}
 </style>
 </head>
+
 <body>
-<header><h1>Chess Academy</h1><p>Aprenda, jogue e evolua a cada movimento.</p></header>
+
+<header>
+  <h1>♟ Chess Academy</h1>
+  <p>Aprenda, jogue e evolua a cada movimento.</p>
+</header>
+
 <main>
+
 <section class="panel">
- <div class="row section"><strong>Você joga com as peças brancas</strong><label>Nível do adversário
- <select id="level"><option value="1">1 · Iniciante</option><option value="2">2 · Fácil</option><option value="3" selected>3 · Intermediário</option><option value="4">4 · Avançado</option><option value="5">5 · Desafiador</option></select></label></div>
- <div class="board-wrap"><div id="board" class="board" aria-label="Tabuleiro de xadrez"></div></div>
- <div class="status" id="status" role="status">Sua vez! Escolha uma peça branca.</div>
- <div class="controls">
-  <button class="primary" id="hintBtn">Dica de movimento</button><button id="undoBtn">Desfazer</button><button id="flipBtn">Virar tabuleiro</button><button id="newBtn">Nova partida</button>
- </div>
- <p class="small">Toque em uma peça para ver os movimentos legais. Para promover um peão, escolha D, T, B ou C quando solicitado.</p>
+
+  <div class="section">
+    <strong>Você joga com as peças brancas</strong>
+    <br><br>
+    <label>
+      Nível do adversário:
+      <select id="level">
+        <option value="1">1 · Iniciante</option>
+        <option value="2">2 · Fácil</option>
+        <option value="3" selected>3 · Intermediário</option>
+        <option value="4">4 · Avançado</option>
+        <option value="5">5 · Desafiador</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="board-wrap">
+    <div id="board" class="board"></div>
+  </div>
+
+  <div id="status" class="status">
+    Sua vez! Escolha uma peça branca.
+  </div>
+
+  <div class="controls">
+    <button class="primary" id="hintBtn">Dica</button>
+    <button id="undoBtn">Desfazer</button>
+    <button id="flipBtn">Virar tabuleiro</button>
+    <button id="newBtn">Nova partida</button>
+  </div>
+
+  <p class="small">
+    Toque em uma peça para visualizar seus movimentos legais.
+  </p>
+
 </section>
+
 <aside class="panel">
- <div class="section"><h2>Professora Lia</h2><div class="assistant"><div class="avatar">♕</div><div><strong>Lia · Assistente de xadrez</strong><p id="lia">Olá! Vamos jogar. Observe o centro do tabuleiro e desenvolva suas peças.</p></div></div></div>
- <div class="section"><h2>Análise e dicas</h2><div id="analysis" class="hint">Faça seu primeiro movimento. Posso sugerir uma jogada para a posição atual.</div><div class="controls"><button id="analyzeBtn">Analisar posição</button><button id="lessonBtn">Lição rápida</button></div></div>
- <div class="section"><h2>Movimentos</h2><div id="moves" class="moves">A partida ainda não começou.</div></div>
- <div class="section"><h2>Sobre o jogo</h2><p class="small">As regras são validadas pela biblioteca chess.js: xeque, xeque-mate, empate, roque, en passant, promoção e movimentos legais. O adversário é uma IA simplificada de busca e avaliação, não um motor profissional como Stockfish.</p></div>
+
+  <div class="section">
+    <h2>Professora Lia</h2>
+    <div class="assistant">
+      <div class="avatar">♕</div>
+      <div>
+        <strong>Lia · Assistente de xadrez</strong>
+        <p id="lia">Olá! Vamos aprender e jogar juntos.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Análise e dicas</h2>
+    <div id="analysis" class="hint">
+      Faça seu primeiro movimento.
+    </div>
+
+    <div class="controls">
+      <button id="analyzeBtn">Analisar posição</button>
+      <button id="lessonBtn">Lição rápida</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Movimentos</h2>
+    <div id="moves" class="moves">
+      A partida ainda não começou.
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Sobre o jogo</h2>
+    <p class="small">
+      As regras são controladas pela biblioteca chess.js.
+      A inteligência artificial usa avaliação de material e
+      busca minimax com poda alfa-beta.
+    </p>
+  </div>
+
 </aside>
 </main>
-<script>
+
+<script type="module">
+
+import { Chess } from "https://cdn.jsdelivr.net/npm/chess.js@1.4.0/+esm";
+
 (() => {
-const $=id=>document.getElementById(id);
-if(typeof Chess==='undefined'){ $('status').textContent='Não foi possível carregar chess.js. Verifique sua conexão com a internet e recarregue a página.'; return; }
-const game=new Chess();
-const symbols={wk:'♔',wq:'♕',wr:'♖',wb:'♗',wn:'♘',wp:'♙',bk:'♚',bq:'♛',br:'♜',bb:'♝',bn:'♞',bp:'♟'};
-const files='abcdefgh'; let selected=null,legal=[],flipped=false,lastMove=null,busy=false;
-const lessons=[
-'Controle o centro: casas centrais dão mais mobilidade às suas peças.',
-'Desenvolva cavalos e bispos antes de sair movendo a mesma peça muitas vezes.',
-'Faça o roque quando possível para proteger o rei e conectar as torres.',
-'Antes de jogar, pergunte: meu adversário pode capturar esta peça?',
-'Evite levar a dama para a batalha cedo demais. Desenvolva suas peças primeiro.'
-];
-function sqName(r,c){return files[c]+(8-r)}
-function render(){
- const board=$('board');board.innerHTML='';
- const matrix=game.board();
- for(let vr=0;vr<8;vr++)for(let vc=0;vc<8;vc++){
-  const r=flipped?7-vr:vr,c=flipped?7-vc:vc,sq=sqName(r,c),p=matrix[r][c],b=document.createElement('button');
-  b.className='square '+((r+c)%2?'dark':'light');
-  if(selected===sq)b.classList.add('selected');
-  if(lastMove&&(lastMove.from===sq||lastMove.to===sq))b.classList.add('last');
-  const target=legal.find(m=>m.to===sq);if(target)b.classList.add(p?'capture':'legal');
-  if(p){const span=document.createElement('span');span.className='piece';span.textContent=symbols[p.color+p.type];span.style.color=p.color==='w'?'#fff':'#171b24';span.style.textShadow=p.color==='w'?'0 1px 2px #1b2535,0 0 2px #1b2535':'0 1px 2px #fff';b.append(span)}
-  if(vc===0){const co=document.createElement('span');co.className='coords';co.textContent=8-r;b.append(co)}
-  b.addEventListener('click',()=>tap(sq));board.append(b);
- }
- updateStatus();updateMoves();
-}
-function updateStatus(){
- let s='Sua vez! Escolha uma peça branca.';
- if(game.isCheckmate())s='Xeque-mate! '+(game.turn()==='w'?'As pretas':'As brancas')+' venceram.';
- else if(game.isStalemate())s='Empate por afogamento.';
- else if(game.isThreefoldRepetition())s='Empate por repetição tripla.';
- else if(game.isInsufficientMaterial())s='Empate por material insuficiente.';
- else if(game.isDraw())s='A partida terminou empatada.';
- else if(game.isCheck())s='Xeque! Seu rei está ameaçado.';
- else s=game.turn()==='w'?'Sua vez.':'Vez do adversário...';
- $('status').textContent=s;
-}
-function updateMoves(){
- const hist=game.history();if(!hist.length){$('moves').textContent='A partida ainda não começou.';return}
- let out='';for(let i=0;i<hist.length;i+=2)out+=`<div class="move-row"><span>${i/2+1}.</span><span>${hist[i]||''}</span><span>${hist[i+1]||''}</span></div>`;
- $('moves').innerHTML=out;$('moves').scrollTop=$('moves').scrollHeight;
-}
-function tap(sq){
- if(busy||game.isGameOver()||game.turn()!=='w')return;
- if(selected&&legal.some(m=>m.to===sq)){
-  let promotion='q';const piece=game.get(selected);
-  if(piece&&piece.type==='p'&&(sq.endsWith('8')||sq.endsWith('1'))){const answer=prompt('Promover para: D (dama), T (torre), B (bispo), C (cavalo)','D');const map={d:'q',t:'r',b:'b',c:'n'};promotion=map[(answer||'d').toLowerCase()]||'q'}
-  const move=game.move({from:selected,to:sq,promotion});if(move){lastMove=move;selected=null;legal=[];render();explain(move);if(!game.isGameOver())setTimeout(botMove,250)}return;
- }
- const p=game.get(sq);if(p&&p.color==='w'){selected=sq;legal=game.moves({square:sq,verbose:true});}
- else{selected=null;legal=[]}render();
-}
-function explain(m){
- const names={p:'peão',n:'cavalo',b:'bispo',r:'torre',q:'dama',k:'rei'};
- let msg=`Você moveu ${names[m.piece]} de ${m.from} para ${m.to}.`;
- if(m.captured)msg+=' Você capturou uma peça adversária.';
- if(m.san.includes('+'))msg+=' Seu movimento deu xeque!';
- if(m.flags.includes('k')||m.flags.includes('q'))msg+=' Você realizou o roque.';
- $('lia').textContent=msg;
-}
-const vals={p:100,n:320,b:330,r:500,q:900,k:20000};
-function evaluate(){
- let score=0;const b=game.board();
- for(let r=0;r<8;r++)for(let c=0;c<8;c++){const p=b[r][c];if(!p)continue;let v=vals[p.type];if(p.type==='p')v+=(p.color==='b'?r:7-r)*5; if(r>=2&&r<=5&&c>=2&&c<=5)v+=8;score+=(p.color==='b'?v:-v)}
- return score;
-}
-function minimax(depth,alpha,beta,maximizing){
- if(depth===0||game.isGameOver())return evaluate();
- const moves=game.moves({verbose:true});if(maximizing){let best=-Infinity;for(const m of moves){game.move(m);best=Math.max(best,minimax(depth-1,alpha,beta,false));game.undo();alpha=Math.max(alpha,best);if(beta<=alpha)break}return best}
- let best=Infinity;for(const m of moves){game.move(m);best=Math.min(best,minimax(depth-1,alpha,beta,true));game.undo();beta=Math.min(beta,best);if(beta<=alpha)break}return best;
-}
-function chooseBotMove(){
- const level=+$('level').value,depth=[1,1,2,2,3,3][level],moves=game.moves({verbose:true});
- if(level===1&&Math.random()<.55)return moves[Math.floor(Math.random()*moves.length)];
- const scored=[];for(const m of moves){game.move(m);const score=minimax(depth-1,-Infinity,Infinity,true);game.undo();scored.push({m,score})}
- scored.sort((a,b)=>a.score-b.score);
- if(level<=2&&Math.random()<.35)return scored[Math.floor(Math.random()*Math.min(5,scored.length))].m;
- if(level===3&&Math.random()<.15)return scored[Math.floor(Math.random()*Math.min(3,scored.length))].m;
- return scored[0].m;
-}
-function botMove(){
- if(game.isGameOver()||game.turn()!=='b')return;busy=true;$('lia').textContent='Estou avaliando a posição...';
- setTimeout(()=>{const m=chooseBotMove();if(m){const made=game.move(m);lastMove=made;render();$('lia').textContent=`Lia: o adversário jogou ${made.san}. Observe como essa jogada influencia o centro e a segurança das peças.`}busy=false;render()},80);
-}
-$('hintBtn').onclick=()=>{
- if(game.isGameOver()||game.turn()!=='w')return;
- const moves=game.moves({verbose:true});if(!moves.length)return;
- let best=null,bestScore=-Infinity;
- for(const m of moves){game.move(m);const score=-evaluate();game.undo();if(score>bestScore){bestScore=score;best=m}}
- $('analysis').textContent=best?`Sugestão: ${best.from} para ${best.to}. ${best.captured?'Esse movimento captura uma peça.':'Considere como essa peça melhora sua posição.'}`:'Nenhuma sugestão disponível.';
+
+"use strict";
+
+const $ = id => document.getElementById(id);
+
+const game = new Chess();
+
+const symbols = {
+  wk:"♔", wq:"♕", wr:"♖", wb:"♗", wn:"♘", wp:"♙",
+  bk:"♚", bq:"♛", br:"♜", bb:"♝", bn:"♞", bp:"♟"
 };
-$('analyzeBtn').onclick=()=>{let text=game.isCheck()?'Há um rei em xeque. Priorize responder à ameaça.':`Material aproximado: ${evaluate()>0?'vantagem das pretas':evaluate()<0?'vantagem das brancas':'equilibrado'}. `;text+=' Procure desenvolver as peças e manter o rei protegido.';$('analysis').textContent=text};
-$('lessonBtn').onclick=()=>{$('analysis').textContent=lessons[Math.floor(Math.random()*lessons.length)]};
-$('undoBtn').onclick=()=>{if(busy)return;if(game.history().length){game.undo();if(game.turn()==='b'&&game.history().length)game.undo();lastMove=null;selected=null;legal=[];render();$('lia').textContent='Movimento desfeito. Tente uma estratégia diferente.'}};
-$('flipBtn').onclick=()=>{flipped=!flipped;render()};
-$('newBtn').onclick=()=>{if(confirm('Começar uma nova partida?')){game.reset();selected=null;legal=[];lastMove=null;render();$('lia').textContent='Nova partida! Vamos controlar o centro e desenvolver as peças.';$('analysis').textContent='Faça seu primeiro movimento para começar.'}};
+
+const files = "abcdefgh";
+
+const lessons = [
+  "Controle o centro. As casas centrais aumentam a mobilidade das suas peças.",
+  "Desenvolva cavalos e bispos antes de movimentar a mesma peça várias vezes.",
+  "Faça o roque para proteger seu rei.",
+  "Antes de jogar, observe se seu adversário pode capturar sua peça.",
+  "Evite movimentar a dama cedo demais.",
+  "Tente desenvolver todas as peças antes de iniciar um ataque."
+];
+
+let selected = null;
+let legal = [];
+let flipped = false;
+let lastMove = null;
+let busy = false;
+
+function squareName(row, col) {
+  return files[col] + (8 - row);
+}
+
+function render() {
+
+  const board = $("board");
+  board.innerHTML = "";
+
+  const matrix = game.board();
+
+  for (let vr = 0; vr < 8; vr++) {
+    for (let vc = 0; vc < 8; vc++) {
+
+      const r = flipped ? 7 - vr : vr;
+      const c = flipped ? 7 - vc : vc;
+
+      const sq = squareName(r, c);
+      const piece = matrix[r][c];
+
+      const button = document.createElement("button");
+
+      button.className = "square " +
+        ((r + c) % 2 ? "dark" : "light");
+
+      if (selected === sq) {
+        button.classList.add("selected");
+      }
+
+      if (lastMove &&
+          (lastMove.from === sq || lastMove.to === sq)) {
+        button.classList.add("last");
+      }
+
+      const target = legal.find(m => m.to === sq);
+
+      if (target) {
+        button.classList.add(piece ? "capture" : "legal");
+      }
+
+      if (piece) {
+        const span = document.createElement("span");
+        span.className = "piece";
+        span.textContent = symbols[piece.color + piece.type];
+
+        span.style.color =
+          piece.color === "w" ? "#fff" : "#171b24";
+
+        span.style.textShadow =
+          piece.color === "w"
+          ? "0 1px 2px #1b2535"
+          : "0 1px 2px #fff";
+
+        button.append(span);
+      }
+
+      if (vc === 0) {
+        const coord = document.createElement("span");
+        coord.className = "coords";
+        coord.textContent = 8 - r;
+        button.append(coord);
+      }
+
+      button.addEventListener("click", () => tap(sq));
+
+      board.append(button);
+    }
+  }
+
+  updateStatus();
+  updateMoves();
+}
+
+function updateStatus() {
+
+  let message;
+
+  if (game.isCheckmate()) {
+    message = "Xeque-mate! " +
+      (game.turn() === "w" ? "As pretas" : "As brancas") +
+      " venceram.";
+  } else if (game.isStalemate()) {
+    message = "Empate por afogamento.";
+  } else if (game.isThreefoldRepetition()) {
+    message = "Empate por repetição tripla.";
+  } else if (game.isInsufficientMaterial()) {
+    message = "Empate por material insuficiente.";
+  } else if (game.isDraw()) {
+    message = "A partida terminou empatada.";
+  } else if (game.isCheck()) {
+    message = "Xeque! Seu rei está ameaçado.";
+  } else {
+    message = game.turn() === "w"
+      ? "Sua vez!"
+      : "Vez do adversário...";
+  }
+
+  $("status").textContent = message;
+}
+
+function updateMoves() {
+
+  const history = game.history();
+
+  if (!history.length) {
+    $("moves").textContent = "A partida ainda não começou.";
+    return;
+  }
+
+  let output = "";
+
+  for (let i = 0; i < history.length; i += 2) {
+    const row = document.createElement("div");
+    row.className = "move-row";
+
+    const number = document.createElement("span");
+    number.textContent = (i / 2 + 1) + ".";
+
+    const white = document.createElement("span");
+    white.textContent = history[i] || "";
+
+    const black = document.createElement("span");
+    black.textContent = history[i + 1] || "";
+
+    row.append(number, white, black);
+    $("moves").append(row);
+  }
+
+}
+
+function tap(sq) {
+
+  if (busy || game.isGameOver() || game.turn() !== "w") {
+    return;
+  }
+
+  if (selected && legal.some(m => m.to === sq)) {
+
+    const piece = game.get(selected);
+    let promotion = "q";
+
+    if (piece &&
+        piece.type === "p" &&
+        (sq.endsWith("8") || sq.endsWith("1"))) {
+
+      const answer = prompt(
+        "Promover para: D (dama), T (torre), B (bispo), C (cavalo)",
+        "D"
+      );
+
+      const map = {d:"q", t:"r", b:"b", c:"n"};
+
+      promotion = map[(answer || "d").toLowerCase()] || "q";
+    }
+
+    const move = game.move({
+      from: selected,
+      to: sq,
+      promotion
+    });
+
+    if (move) {
+
+      lastMove = move;
+      selected = null;
+      legal = [];
+
+      render();
+      explain(move);
+
+      if (!game.isGameOver()) {
+        setTimeout(botMove, 250);
+      }
+    }
+
+    return;
+  }
+
+  const piece = game.get(sq);
+
+  if (piece && piece.color === "w") {
+    selected = sq;
+    legal = game.moves({
+      square: sq,
+      verbose: true
+    });
+  } else {
+    selected = null;
+    legal = [];
+  }
+
+  render();
+}
+
+function explain(move) {
+
+  const names = {
+    p:"peão",
+    n:"cavalo",
+    b:"bispo",
+    r:"torre",
+    q:"dama",
+    k:"rei"
+  };
+
+  let message =
+    `Você moveu ${names[move.piece]} de ${move.from} para ${move.to}.`;
+
+  if (move.captured) {
+    message += " Você capturou uma peça adversária.";
+  }
+
+  if (move.san.includes("+")) {
+    message += " Seu movimento deu xeque!";
+  }
+
+  $("lia").textContent = message;
+}
+
+const values = {
+  p:100,
+  n:320,
+  b:330,
+  r:500,
+  q:900,
+  k:20000
+};
+
+function evaluate() {
+
+  let score = 0;
+  const board = game.board();
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+
+      const piece = board[r][c];
+
+      if (!piece) continue;
+
+      let value = values[piece.type];
+
+      if (piece.type === "p") {
+        value += (piece.color === "b" ? r : 7-r) * 5;
+      }
+
+      if (r >= 2 && r <= 5 && c >= 2 && c <= 5) {
+        value += 8;
+      }
+
+      score += piece.color === "b" ? value : -value;
+    }
+  }
+
+  return score;
+}
+
+function minimax(depth, alpha, beta) {
+
+  if (depth === 0 || game.isGameOver()) {
+    return evaluate();
+  }
+
+  const maximizing = game.turn() === "b";
+  const moves = game.moves({verbose:true});
+
+  if (maximizing) {
+
+    let best = -Infinity;
+
+    for (const move of moves) {
+      game.move(move);
+
+      best = Math.max(
+        best,
+        minimax(depth - 1, alpha, beta)
+      );
+
+      game.undo();
+
+      alpha = Math.max(alpha, best);
+
+      if (beta <= alpha) break;
+    }
+
+    return best;
+  }
+
+  let best = Infinity;
+
+  for (const move of moves) {
+    game.move(move);
+
+    best = Math.min(
+      best,
+      minimax(depth - 1, alpha, beta)
+    );
+
+    game.undo();
+
+    beta = Math.min(beta, best);
+
+    if (beta <= alpha) break;
+  }
+
+  return best;
+}
+
+function chooseBotMove() {
+
+  const level = Number($("level").value);
+
+  const depth = [1, 1, 2, 2, 3, 3][level];
+
+  const moves = game.moves({verbose:true});
+
+  if (!moves.length) return null;
+
+  const scored = [];
+
+  for (const move of moves) {
+
+    game.move(move);
+
+    const score = minimax(
+      depth - 1,
+      -Infinity,
+      Infinity
+    );
+
+    game.undo();
+
+    scored.push({move, score});
+  }
+
+  scored.sort((a, b) => a.score - b.score);
+
+  if (level === 1 && Math.random() < 0.55) {
+    return moves[Math.floor(Math.random() * moves.length)];
+  }
+
+  if (level === 2 && Math.random() < 0.35) {
+    return scored[
+      Math.floor(Math.random() * Math.min(5, scored.length))
+    ].move;
+  }
+
+  if (level === 3 && Math.random() < 0.15) {
+    return scored[
+      Math.floor(Math.random() * Math.min(3, scored.length))
+    ].move;
+  }
+
+  return scored[0].move;
+}
+
+function botMove() {
+
+  if (game.isGameOver() || game.turn() !== "b") {
+    return;
+  }
+
+  busy = true;
+
+  $("lia").textContent = "Estou avaliando a posição...";
+
+  setTimeout(() => {
+
+    try {
+
+      const move = chooseBotMove();
+
+      if (move) {
+        const made = game.move(move);
+        lastMove = made;
+        render();
+
+        $("lia").textContent =
+          "Lia: o adversário jogou " + made.san +
+          ". Observe como essa jogada influencia o tabuleiro.";
+      }
+
+    } catch (error) {
+
+      console.error(error);
+      $("lia").textContent = "Não consegui calcular a jogada.";
+
+    } finally {
+      busy = false;
+      render();
+    }
+
+  }, 50);
+}
+
+$("hintBtn").onclick = () => {
+
+  if (game.isGameOver() || game.turn() !== "w") return;
+
+  const moves = game.moves({verbose:true});
+
+  let best = null;
+  let bestScore = -Infinity;
+
+  for (const move of moves) {
+
+    game.move(move);
+
+    const score = -evaluate();
+
+    game.undo();
+
+    if (score > bestScore) {
+      bestScore = score;
+      best = move;
+    }
+  }
+
+  $("analysis").textContent = best
+    ? `Sugestão: ${best.from} para ${best.to}.`
+    : "Nenhuma sugestão disponível.";
+};
+
+$("analyzeBtn").onclick = () => {
+
+  const score = evaluate();
+
+  let message;
+
+  if (score > 100) {
+    message = "As pretas têm vantagem material.";
+  } else if (score < -100) {
+    message = "As brancas têm vantagem material.";
+  } else {
+    message = "A posição está relativamente equilibrada.";
+  }
+
+  if (game.isCheck()) {
+    message += " Existe um rei em xeque.";
+  }
+
+  $("analysis").textContent = message;
+};
+
+$("lessonBtn").onclick = () => {
+
+  const lesson = lessons[
+    Math.floor(Math.random() * lessons.length)
+  ];
+
+  $("analysis").textContent = lesson;
+};
+
+$("undoBtn").onclick = () => {
+
+  if (busy || !game.history().length) return;
+
+  game.undo();
+
+  if (game.turn() === "b" && game.history().length) {
+    game.undo();
+  }
+
+  lastMove = null;
+  selected = null;
+  legal = [];
+
+  render();
+
+  $("lia").textContent =
+    "Movimento desfeito. Tente outra estratégia.";
+};
+
+$("flipBtn").onclick = () => {
+  flipped = !flipped;
+  render();
+};
+
+$("newBtn").onclick = () => {
+
+  if (!confirm("Começar uma nova partida?")) return;
+
+  game.reset();
+
+  selected = null;
+  legal = [];
+  lastMove = null;
+
+  render();
+
+  $("lia").textContent =
+    "Nova partida! Vamos controlar o centro.";
+
+  $("analysis").textContent =
+    "Faça seu primeiro movimento para começar.";
+};
+
 render();
+
 })();
+
 </script>
 </body>
 </html>
