@@ -1,11 +1,10 @@
-
 {
   "name": "chess-academy-android",
   "version": "0.5.0",
   "private": true,
   "description": "Chess Academy - Aprenda e jogue xadrez",
   "scripts": {
-    "build": "mkdir -p www && esbuild src/main.js --bundle --format=esm --outfile=www/app.js && cp index.html www/index.html",
+    "build": "mkdir -p www && node scripts/write-version.js && esbuild src/main.js --bundle --format=esm --outfile=www/app.js && cp index.html www/index.html",
     "cap:sync": "cap sync android"
   },
   "dependencies": {

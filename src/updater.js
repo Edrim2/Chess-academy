@@ -6,6 +6,38 @@ const RELEASES_API =
 
 const $ = id => document.getElementById(id);
 
+function parseNumericBuild(value) {
+  if (value === null || value === undefined || value === "") return null;
+
+  const numeric = Number(
+    String(value).replace(/^build-/, "").trim()
+  );
+
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+async function readInstalledVersion() {
+  try {
+    const response = await fetch("./version.json?check=" + Date.now(), {
+      cache: "no-store"
+    });
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+
+    if (!data || typeof data !== "object") return null;
+
+    const build = parseNumericBuild(data.build);
+
+    if (build === null) return null;
+
+    return { ...data, build };
+  } catch {
+    return null;
+  }
+}
+
 async function checkForUpdates() {
   const panel = $("update-panel");
   const message = $("update-message");
@@ -17,11 +49,14 @@ async function checkForUpdates() {
   download.style.display = "none";
   message.textContent = "Verificando atualizações...";
 
+  if (!navigator.onLine) {
+    message.textContent = "Sem conexão. Verifique sua conexão e tente novamente.";
+    return;
+  }
+
   try {
-    const [versionResponse, releaseResponse] = await Promise.all([
-      fetch("./version.json?check=" + Date.now(), {
-        cache: "no-store"
-      }),
+    const [installed, releaseResponse] = await Promise.all([
+      readInstalledVersion(),
       fetch(RELEASES_API, {
         cache: "no-store",
         headers: {
@@ -34,21 +69,20 @@ async function checkForUpdates() {
       throw new Error("GitHub indisponível");
     }
 
-    const installed = versionResponse.ok
-      ? await versionResponse.json()
-      : { build: 0 };
+    if (!installed) {
+      message.textContent =
+        "Metadado da versão instalada ausente ou inválido. A atualização foi ignorada.";
+      return;
+    }
 
     const release = await releaseResponse.json();
+    const latestBuild = parseNumericBuild(release.tag_name);
 
-    const latestBuild = Number(
-      String(release.tag_name || "").replace(/^build-/, "")
-    );
-
-    const installedBuild = Number(installed.build || 0);
-
-    if (!latestBuild) {
+    if (!Number.isFinite(latestBuild) || latestBuild <= 0) {
       throw new Error("Versão inválida");
     }
+
+    const installedBuild = Number(installed.build || 0);
 
     if (latestBuild > installedBuild) {
       const apk = (release.assets || []).find(asset =>
@@ -73,7 +107,6 @@ async function checkForUpdates() {
       message.textContent =
         "Você já está usando a versão mais recente!";
     }
-
   } catch (error) {
     message.textContent =
       "Não foi possível verificar. Confira sua conexão e tente novamente.";
