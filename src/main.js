@@ -1,5 +1,6 @@
 
 import { Chess } from "chess.js";
+import { initializeUpdater } from "./updater.js";
 
 // ==========================================
 // CHESS ACADEMY v0.6.0
@@ -70,7 +71,6 @@ function devIsActive() {
 
 function devLog(message, type = "INFO") {
   const time = new Date().toLocaleTimeString();
-
   const entry = `[${time}] [${type}] ${message}`;
 
   devLogs.push(entry);
@@ -177,17 +177,8 @@ function devInitialize() {
   });
 
   $("dev-test-moves").addEventListener("click", devTestMoves);
-
-  $("dev-test-animation").addEventListener(
-    "click",
-    devTestAnimation
-  );
-
-  $("dev-test-sound").addEventListener(
-    "click",
-    devTestSound
-  );
-
+  $("dev-test-animation").addEventListener("click", devTestAnimation);
+  $("dev-test-sound").addEventListener("click", devTestSound);
   $("dev-export").addEventListener("click", devExportReport);
 
   $("dev-clear-log").addEventListener("click", () => {
@@ -272,9 +263,7 @@ function devTestAnimation() {
   const board = $("board");
 
   board.classList.remove("dev-pulse");
-
   void board.offsetWidth;
-
   board.classList.add("dev-pulse");
 
   setTimeout(() => {
@@ -306,7 +295,6 @@ async function devTestSound() {
     oscillator.frequency.value = 660;
 
     gain.gain.setValueAtTime(0.12, audio.currentTime);
-
     gain.gain.exponentialRampToValueAtTime(
       0.001,
       audio.currentTime + 0.3
@@ -383,7 +371,6 @@ function renderBoard() {
   board.innerHTML = "";
 
   const position = game.board();
-
   const history = game.history({ verbose: true });
   const lastMove = history[history.length - 1];
 
@@ -453,7 +440,6 @@ function renderBoard() {
 
 function handleSquareClick(square) {
   if (thinking || game.isGameOver()) return;
-
   if (game.turn() !== playerColor) return;
 
   const piece = game.get(square);
@@ -500,7 +486,6 @@ function handleSquareClick(square) {
 
       if (!game.isGameOver()) {
         thinking = true;
-
         updateInformation();
 
         setLia("Boa jogada! Estou pensando na minha resposta.");
@@ -660,7 +645,6 @@ function updateHistory() {
     black.textContent = history[i + 1] || "";
 
     row.append(number, white, black);
-
     container.appendChild(row);
   }
 
@@ -850,17 +834,11 @@ function showLesson() {
 // ==========================================
 
 window.addEventListener("error", event => {
-  devLog(
-    `Erro JavaScript: ${event.message}`,
-    "ERROR"
-  );
+  devLog(`Erro JavaScript: ${event.message}`, "ERROR");
 });
 
 window.addEventListener("unhandledrejection", event => {
-  devLog(
-    `Promise rejeitada: ${String(event.reason)}`,
-    "ERROR"
-  );
+  devLog(`Promise rejeitada: ${String(event.reason)}`, "ERROR");
 });
 
 window.addEventListener("online", () => {
@@ -907,7 +885,6 @@ function initialize() {
       "Chess Academy: elementos HTML ausentes:",
       missing
     );
-
     return;
   }
 
@@ -923,6 +900,9 @@ function initialize() {
   });
 
   devInitialize();
+
+  // INITIALIZE UPDATE SYSTEM
+  initializeUpdater();
 
   renderBoard();
   updateHistory();
