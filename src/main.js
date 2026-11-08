@@ -11,6 +11,7 @@ let flipped = false;
 let thinking = false;
 let botLevel = 3;
 let playerColor = "w";
+let botTimer = null;
 
 const symbols = {
   wk: "♔", wq: "♕", wr: "♖", wb: "♗", wn: "♘", wp: "♙",
@@ -46,7 +47,6 @@ function renderBoard() {
     for (let col = 0; col < 8; col++) {
       const rank = flipped ? row + 1 : 8 - row;
       const file = flipped ? 7 - col : col;
-
       const squareName = getSquareName(file, rank);
       const piece = position[8 - rank][file];
 
@@ -69,16 +69,17 @@ function renderBoard() {
         square.classList.add("selected");
       }
 
-      const possible = legalMoves.find(
-        move => move.to === squareName
-      );
+      const possible = legalMoves.find(move => move.to === squareName);
 
       if (possible) {
         square.classList.add("possible");
         if (piece) square.classList.add("capture");
       }
 
-      if (game.history({ verbose: true }).at(-1)?.to === squareName) {
+      const history = game.history({ verbose: true });
+      const lastMove = history[history.length - 1];
+
+      if (lastMove && (lastMove.from === squareName || lastMove.to === squareName)) {
         square.classList.add("last-move");
       }
 
@@ -134,11 +135,15 @@ function handleSquareClick(square) {
 
       renderBoard();
       updateHistory();
-      updateInformation();
 
       if (!game.isGameOver()) {
+        thinking = true;
+        updateInformation();
         setLia("Boa jogada! Estou pensando na minha resposta.");
-        window.setTimeout(makeBotMove, 350);
+
+        botTimer = window.setTimeout(makeBotMove, 350);
+      } else {
+        finishGame();
       }
     } catch (error) {
       setLia("Esse movimento não foi possível. Tente outro.");
@@ -173,7 +178,6 @@ function evaluatePosition() {
       if (!piece) continue;
 
       const value = pieceValues[piece.type] || 0;
-
       score += piece.color === "b" ? value : -value;
     }
   }
@@ -182,15 +186,17 @@ function evaluatePosition() {
 }
 
 function makeBotMove() {
-  if (game.isGameOver()) return;
-
-  thinking = true;
+  if (game.isGameOver() || game.turn() === playerColor) {
+    thinking = false;
+    updateInformation();
+    return;
+  }
 
   const moves = game.moves({ verbose: true });
 
   if (!moves.length) {
     thinking = false;
-    updateInformation();
+    finishGame();
     return;
   }
 
@@ -204,7 +210,6 @@ function makeBotMove() {
     });
 
     const score = evaluatePosition();
-
     game.undo();
 
     scoredMoves.push({ move, score });
@@ -220,11 +225,8 @@ function makeBotMove() {
     5: 1
   };
 
-  const poolSize = randomness[botLevel];
-  const candidates = scoredMoves.slice(0, poolSize);
-
-  const chosen =
-    candidates[Math.floor(Math.random() * candidates.length)];
+  const candidates = scoredMoves.slice(0, randomness[botLevel]);
+  const chosen = candidates[Math.floor(Math.random() * candidates.length)];
 
   game.move({
     from: chosen.move.from,
@@ -233,17 +235,21 @@ function makeBotMove() {
   });
 
   thinking = false;
+  selectedSquare = null;
+  legalMoves = [];
 
   renderBoard();
   updateHistory();
   updateInformation();
 
   if (game.isGameOver()) {
-    setLia("A partida terminou! Vamos analisar o resultado?");
+    finishGame();
   } else {
-    setLia(game.isCheck() ?
-      "Xeque! Cuidado com o rei." :
-      "Minha jogada foi feita. Sua vez!");
+    setLia(
+      game.isCheck()
+        ? "Xeque! Cuidado com o rei."
+        : "Minha jogada foi feita. Sua vez!"
+    );
   }
 }
 
@@ -279,9 +285,9 @@ function updateInformation() {
   if (thinking) {
     status = "O adversário está pensando...";
   } else if (game.isCheckmate()) {
-    status = game.turn() === "w" ?
-      "Xeque-mate! O adversário venceu." :
-      "Xeque-mate! Você venceu!";
+    status = game.turn() === "w"
+      ? "Xeque-mate! O adversário venceu."
+      : "Xeque-mate! Você venceu!";
   } else if (game.isDraw()) {
     status = "Empate!";
   } else if (game.isCheck()) {
@@ -293,7 +299,29 @@ function updateInformation() {
   $("status").textContent = status;
 }
 
+function finishGame() {
+  thinking = false;
+  updateInformation();
+
+  if (game.isCheckmate()) {
+    setLia(game.turn() === "w"
+      ? "Xeque-mate! O adversário venceu esta partida."
+      : "Xeque-mate! Você venceu! Excelente partida!");
+  } else {
+    setLia("A partida terminou empatada. Vamos tentar outra?");
+  }
+}
+
+function clearBotTimer() {
+  if (botTimer !== null) {
+    window.clearTimeout(botTimer);
+    botTimer = null;
+  }
+}
+
 function newGame() {
+  clearBotTimer();
+
   game.reset();
   selectedSquare = null;
   legalMoves = [];
@@ -306,7 +334,8 @@ function newGame() {
 }
 
 function undoMove() {
-  if (thinking) return;
+  clearBotTimer();
+  thinking = false;
 
   if (game.history().length === 0) return;
 
@@ -322,7 +351,7 @@ function undoMove() {
   renderBoard();
   updateHistory();
 
-  setLia("Voltamos uma jogada. Tente uma estratégia diferente!");
+  setLia("Voltamos uma jogada. Tente outra estratégia!");
 }
 
 function showHint() {
@@ -361,9 +390,8 @@ function analyzePosition() {
   } else if (game.isCheck()) {
     setLia("Seu rei está em xeque. Procure uma defesa!");
   } else {
-    const moves = game.moves().length;
     setLia(
-      `Existem ${moves} movimentos legais disponíveis nesta posição. Observe o centro e a segurança do rei.`
+      `Existem ${game.moves().length} movimentos legais disponíveis nesta posição. Observe o centro e a segurança do rei.`
     );
   }
 }
@@ -387,24 +415,47 @@ function showLesson() {
     "Evite deixar peças importantes sem proteção."
   ];
 
-  const lesson = lessons[
-    Math.floor(Math.random() * lessons.length)
-  ];
-
+  const lesson = lessons[Math.floor(Math.random() * lessons.length)];
   $("lesson").textContent = lesson;
 }
 
-$("new-game").addEventListener("click", newGame);
-$("undo").addEventListener("click", undoMove);
-$("hint").addEventListener("click", showHint);
-$("analyze").addEventListener("click", analyzePosition);
-$("flip").addEventListener("click", flipBoard);
-$("lesson-button").addEventListener("click", showLesson);
+function initialize() {
+  const required = [
+    "board",
+    "status",
+    "moves",
+    "lia-message",
+    "lesson",
+    "new-game",
+    "undo",
+    "hint",
+    "analyze",
+    "flip",
+    "lesson-button",
+    "level"
+  ];
 
-$("level").addEventListener("change", event => {
-  changeLevel(event.target.value);
-});
+  const missing = required.filter(id => !$(id));
 
-renderBoard();
-updateHistory();
-setLia("Olá! Eu sou a Lia, sua professora de xadrez. Vamos começar?");
+  if (missing.length) {
+    console.error("Chess Academy: elementos HTML ausentes:", missing);
+    return;
+  }
+
+  $("new-game").addEventListener("click", newGame);
+  $("undo").addEventListener("click", undoMove);
+  $("hint").addEventListener("click", showHint);
+  $("analyze").addEventListener("click", analyzePosition);
+  $("flip").addEventListener("click", flipBoard);
+  $("lesson-button").addEventListener("click", showLesson);
+
+  $("level").addEventListener("change", event => {
+    changeLevel(event.target.value);
+  });
+
+  renderBoard();
+  updateHistory();
+  setLia("Olá! Eu sou a Lia, sua professora de xadrez. Vamos começar?");
+}
+
+initialize();
