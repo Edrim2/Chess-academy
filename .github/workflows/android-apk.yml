@@ -1,14 +1,15 @@
 
 name: Build Chess Academy APK
 
-'on':
-  workflow_dispatch:
+on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
+
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -16,53 +17,42 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Baixar código do projeto
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
 
-      - name: Setup Java
+      - name: Configurar Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Instalar dependências
+        run: npm install --no-audit --no-fund
 
-      - name: Build web assets
+      - name: Construir aplicação web
         run: npm run build
 
-      - name: Add Android platform if missing
-        run: |
-          if [ ! -d "android" ]; then
-            npx cap add android
-          fi
-
-      - name: Sync Capacitor
+      - name: Sincronizar Capacitor
         run: npx cap sync android
 
-      - name: Grant Gradle permission
-        run: chmod +x android/gradlew
-
-      - name: Build Debug APK
+      - name: Preparar Gradle
+        run: chmod +x ./gradlew
         working-directory: android
-        run: ./gradlew assembleDebug
 
-      - name: Upload APK
+      - name: Construir APK
+        run: ./gradlew assembleDebug
+        working-directory: android
+
+      - name: Publicar APK
         uses: actions/upload-artifact@v4
         with:
           name: Chess-Academy-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
-
-      - name: Publish GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: android/app/build/outputs/apk/debug/app-debug.apk
-          
+          retention-days: 14
