@@ -1,15 +1,14 @@
 
-name: Build Chess Academy APK
+name: Chess Academy - Build and Release APK
 
 on:
   push:
     branches:
       - main
-
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -17,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Baixar código do projeto
+      - name: Baixar projeto
         uses: actions/checkout@v4
 
       - name: Configurar Node.js
@@ -35,7 +34,7 @@ jobs:
       - name: Instalar dependências
         run: npm install --no-audit --no-fund
 
-      - name: Construir aplicação web
+      - name: Construir aplicação
         run: npm run build
 
       - name: Sincronizar Capacitor
@@ -49,10 +48,19 @@ jobs:
         run: ./gradlew assembleDebug
         working-directory: android
 
-      - name: Publicar APK
+      - name: Publicar APK em Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Chess Academy - Build ${{ github.run_number }}
+          generate_release_notes: true
+          make_latest: true
+          files: android/app/build/outputs/apk/debug/app-debug.apk
+          fail_on_unmatched_files: true
+
+      - name: Guardar APK como Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Chess-Academy-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
           retention-days: 14
