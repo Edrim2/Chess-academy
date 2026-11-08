@@ -1,0 +1,80 @@
+
+const OWNER = "Edrim2";
+const REPOSITORY = "Chess-academy";
+
+const RELEASES_API =
+  `https://api.github.com/repos/${OWNER}/${REPOSITORY}/releases/latest`;
+
+const $ = id => document.getElementById(id);
+
+async function checkForUpdates() {
+  const panel = $("update-panel");
+  const message = $("update-message");
+  const download = $("update-download");
+
+  if (!panel || !message || !download) return;
+
+  panel.style.display = "block";
+  download.style.display = "none";
+  message.textContent = "Verificando atualizações...";
+
+  try {
+    const [versionResponse, releaseResponse] = await Promise.all([
+      fetch("./version.json?check=" + Date.now(), { cache: "no-store" }),
+      fetch(RELEASES_API, {
+        cache: "no-store",
+        headers: { Accept: "application/vnd.github+json" }
+      })
+    ]);
+
+    if (!releaseResponse.ok) throw new Error("GitHub indisponível");
+
+    const installed = versionResponse.ok
+      ? await versionResponse.json()
+      : { build: 0 };
+
+    const release = await releaseResponse.json();
+
+    const latestBuild = Number(
+      String(release.tag_name || "").replace(/^build-/, "")
+    );
+
+    const installedBuild = Number(installed.build || 0);
+
+    if (!latestBuild) throw new Error("Versão inválida");
+
+    if (latestBuild > installedBuild) {
+      const apk = (release.assets || []).find(asset =>
+        asset.name.toLowerCase().endsWith(".apk")
+      );
+
+      if (!apk) {
+        message.textContent = "Nova versão encontrada, mas o APK ainda não está disponível.";
+        return;
+      }
+
+      message.textContent =
+        `Nova versão disponível: build ${latestBuild}!`;
+
+      download.style.display = "block";
+      download.onclick = () => {
+        window.open(apk.browser_download_url, "_blank");
+      };
+    } else {
+      message.textContent = "Você já está usando a versão mais recente!";
+    }
+  } catch (error) {
+    message.textContent =
+      "Não foi possível verificar. Confira sua conexão e tente novamente.";
+
+    console.warn("Atualizador:", error);
+  }
+}
+
+export function initializeUpdater() {
+  const button = $("update-check");
+
+  if (button) button.addEventListener("click", checkForUpdates);
+
+  checkForUpdates();
+}
