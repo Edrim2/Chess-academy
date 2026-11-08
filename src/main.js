@@ -1,6 +1,10 @@
-
 import { Chess } from "chess.js";
 import { initializeUpdater } from "./updater.js";
+import {
+  initializeSettings,
+  loadSettings,
+  sanitizeSettings
+} from "./admin.js";
 
 // ==========================================
 // CHESS ACADEMY v0.6.0
@@ -48,6 +52,38 @@ function setLia(message) {
 
 function getSquareName(file, rank) {
   return files[file] + rank;
+}
+
+function applySettings(settings = {}, options = {}) {
+  const safeSettings = sanitizeSettings(settings);
+  const body = document.body;
+
+  if (body) {
+    body.classList.toggle("theme-light", safeSettings.theme === "light");
+    body.classList.toggle("theme-dark", safeSettings.theme === "dark");
+    body.classList.toggle("app-animations-disabled", !safeSettings.animations);
+  }
+
+  botLevel = Number(safeSettings.difficulty);
+
+  const levelSelect = $("level");
+  if (levelSelect) {
+    levelSelect.value = String(botLevel);
+  }
+
+  const liaPanel = $("lia-panel");
+  if (liaPanel) {
+    liaPanel.hidden = !safeSettings.showLia;
+  }
+
+  const historyPanel = $("history-panel");
+  if (historyPanel) {
+    historyPanel.hidden = !safeSettings.showHistory;
+  }
+
+  if (!options.silent && safeSettings.showLia) {
+    setLia("Configurações aplicadas com sucesso.");
+  }
 }
 
 // ==========================================
@@ -626,6 +662,8 @@ function makeBotMove() {
 function updateHistory() {
   const container = $("moves");
 
+  if (!container) return;
+
   container.innerHTML = "";
 
   const history = game.history();
@@ -672,7 +710,10 @@ function updateInformation() {
     status = "Vez do adversário.";
   }
 
-  $("status").textContent = status;
+  const statusElement = $("status");
+  if (statusElement) {
+    statusElement.textContent = status;
+  }
 
   devRefresh();
 }
@@ -808,6 +849,11 @@ function flipBoard() {
 function changeLevel(value) {
   botLevel = Number(value);
 
+  const levelSelect = $("level");
+  if (levelSelect) {
+    levelSelect.value = String(botLevel);
+  }
+
   setLia(`Nível do adversário alterado para ${botLevel}.`);
 
   devLog(`Nível da IA alterado para ${botLevel}.`);
@@ -826,7 +872,10 @@ function showLesson() {
     Math.floor(Math.random() * lessons.length)
   ];
 
-  $("lesson").textContent = lesson;
+  const lessonElement = $("lesson");
+  if (lessonElement) {
+    lessonElement.textContent = lesson;
+  }
 }
 
 // ==========================================
@@ -875,7 +924,8 @@ function initialize() {
     "dev-export",
     "dev-clear-log",
     "dev-close",
-    "app-version"
+    "app-version",
+    "settings-button"
   ];
 
   const missing = required.filter(id => !$(id));
@@ -897,6 +947,14 @@ function initialize() {
 
   $("level").addEventListener("change", event => {
     changeLevel(event.target.value);
+  });
+
+  const savedSettings = loadSettings();
+  applySettings(savedSettings, { silent: true });
+
+  initializeSettings({
+    applySettings,
+    onDifficultyChange: value => changeLevel(value)
   });
 
   devInitialize();
