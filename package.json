@@ -4,7 +4,7 @@
   "private": true,
   "description": "Android wrapper for Chess Academy",
   "scripts": {
-    "build: "mkdir -p www && cp index.html www/index.html",",
+    "build: "mkdir -p www && cp index.html www/index.html",
     "cap:sync": "cap sync android"
   },
   "dependencies": {
