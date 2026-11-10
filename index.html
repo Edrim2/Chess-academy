@@ -234,6 +234,92 @@
       overflow-y: auto;
     }
 
+#board {
+    display: grid;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    grid-template-rows: repeat(8, minmax(0, 1fr));
+
+    width: min(100%, 640px);
+    height: auto;
+    aspect-ratio: 1 / 1;
+
+    gap: 0;
+    padding: 0;
+    min-width: 0;
+    min-height: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+#board .square {
+    position: relative;
+
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+
+    padding: 0;
+    margin: 0;
+
+    box-sizing: border-box;
+    overflow: hidden;
+
+    display: grid;
+    place-items: center;
+}
+
+#board .piece-glyph {
+    position: absolute;
+    inset: 0;
+
+    display: grid;
+    place-items: center;
+
+    font-size: clamp(1rem, 5vw, 3.5rem);
+    line-height: 1;
+
+    pointer-events: none;
+    z-index: 2;
+
+    transform: translate(
+        var(--move-x, 0px),
+        var(--move-y, 0px)
+    );
+
+    transition: transform 240ms cubic-bezier(.2, .8, .2, 1);
+    will-change: transform;
+}
+
+#board .square-coordinate {
+    position: absolute;
+    bottom: 3px;
+    right: 4px;
+
+    font-size: 10px;
+    font-weight: 600;
+
+    opacity: 0.35;
+    pointer-events: none;
+    user-select: none;
+
+    z-index: 1;
+}
+
+#board .square.light .square-coordinate {
+    color: #222;
+}
+
+#board .square.dark .square-coordinate {
+    color: #fff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #board .piece-glyph {
+        transition: none;
+    }
+}
+
     .dev-badge {
       color: #83b2ff;
       font-size: 11px;
@@ -264,11 +350,16 @@
     <section class="panel">
       <h2>Tabuleiro</h2>
 
-      <div id="board" class="board"></div>
+    <div id="board" class="board"></div>
 
-      <div id="status">Carregando partida...</div>
+<div id="status">Carregando partida...</div>
 
-      <div class="controls">
+<div class="legal-move-counter" aria-live="polite">
+    <span>Movimentos legais</span>
+    <strong id="legal-move-count">20</strong>
+</div>
+
+<div class="controls">
         <button class="action primary" id="new-game">Nova partida</button>
         <button class="action" id="undo">Desfazer</button>
         <button class="action" id="hint">Dica da Lia</button>

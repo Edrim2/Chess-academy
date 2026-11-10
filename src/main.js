@@ -365,73 +365,169 @@ function devExportReport() {
 // CHESS BOARD
 // ==========================================
 
-function renderBoard() {
-  const board = $("board");
+function renderBoard({ animateMoves = [] } = {}) {
+    const board = $("board");
 
-  board.innerHTML = "";
-
-  const position = game.board();
-  const history = game.history({ verbose: true });
-  const lastMove = history[history.length - 1];
-
-  for (let row = 0; row < 8; row++) {
-    for (let col = 0; col < 8; col++) {
-      const rank = flipped ? row + 1 : 8 - row;
-      const file = flipped ? 7 - col : col;
-
-      const squareName = getSquareName(file, rank);
-      const piece = position[8 - rank][file];
-
-      const square = document.createElement("button");
-
-      square.type = "button";
-      square.className =
-        "square " +
-        ((file + rank) % 2 === 0 ? "light" : "dark");
-
-      square.dataset.square = squareName;
-      square.setAttribute("aria-label", squareName);
-
-      if (piece) {
-        square.textContent = symbols[piece.color + piece.type];
-
-        square.classList.add(
-          piece.color === "w" ? "white-piece" : "black-piece"
+    const animationStarts = animateMoves.map(move => {
+        const source = board.querySelector(
+            `[data-square="${move.from}"]`
         );
-      }
 
-      if (selectedSquare === squareName) {
-        square.classList.add("selected");
-      }
+        return source
+            ? {
+                to: move.to,
+                rect: source.getBoundingClientRect()
+            }
+            : null;
+    }).filter(Boolean);
 
-      const possible = legalMoves.find(
-        move => move.to === squareName
-      );
+    board.innerHTML = "";
 
-      if (possible) {
-        square.classList.add("possible");
+    const position = game.board();
+    const history = game.history({ verbose: true });
+    const lastMove = history[history.length - 1];
 
-        if (piece) square.classList.add("capture");
-      }
+    for (let row = 0; row < 8; row++) {
+        for (let col = 0; col < 8; col++) {
+            const rank = flipped ? row + 1 : 8 - row;
+            const file = flipped ? 7 - col : col;
 
-      if (
-        lastMove &&
-        (lastMove.from === squareName ||
-         lastMove.to === squareName)
-      ) {
-        square.classList.add("last-move");
-      }
+            const squareName = getSquareName(file, rank);
+            const piece = position[8 - rank][file];
 
-      square.addEventListener("click", () => {
-        handleSquareClick(squareName);
-      });
+            const square = document.createElement("button");
 
-      board.appendChild(square);
+            square.type = "button";
+            square.className =
+                "square " +
+                ((file + rank) % 2 === 0 ? "light" : "dark");
+
+            square.dataset.square = squareName;
+            square.setAttribute("aria-label", squareName);
+
+            const coordinate = document.createElement("span");
+
+            coordinate.className = "square-coordinate";
+            coordinate.textContent = squareName;
+
+            square.appendChild(coordinate);
+
+            if (piece) {
+                const glyph = document.createElement("span");
+
+                glyph.className = "piece-glyph";
+                glyph.textContent =
+                    symbols[piece.color + piece.type];
+
+                glyph.dataset.piece =
+                    piece.color + piece.type;
+
+                square.classList.add(
+                    piece.color === "w"
+                        ? "white-piece"
+                        : "black-piece"
+                );
+
+                square.appendChild(glyph);
+            }
+
+            if (selectedSquare === squareName) {
+                square.classList.add("selected");
+            }
+
+            const possible = legalMoves.find(
+                move => move.to === squareName
+            );
+
+            if (possible) {
+                square.classList.add("possible");
+
+                if (piece) {
+                    square.classList.add("capture");
+                }
+            }
+
+            if (
+                lastMove &&
+                (
+                    lastMove.from === squareName ||
+                    lastMove.to === squareName
+                )
+            ) {
+                square.classList.add("last-move");
+            }
+
+            square.addEventListener("click", () => {
+                handleSquareClick(squareName);
+            });
+
+            board.appendChild(square);
+        }
     }
-  }
 
-  updateInformation();
-  devRefresh();
+    for (const animation of animationStarts) {
+        const destination = board.querySelector(
+            `[data-square="${animation.to}"] .piece-glyph`
+        );
+
+        if (!destination) continue;
+
+        const targetRect = destination.getBoundingClientRect();
+
+        const dx =
+            animation.rect.left +
+            animation.rect.width / 2 -
+            (targetRect.left + targetRect.width / 2);
+
+        const dy =
+            animation.rect.top +
+            animation.rect.height / 2 -
+            (targetRect.top + targetRect.height / 2);
+
+        destination.style.setProperty("--move-x", `${dx}px`);
+        destination.style.setProperty("--move-y", `${dy}px`);
+
+        destination.getBoundingClientRect();
+
+        requestAnimationFrame(() => {
+            destination.style.setProperty("--move-x", "0px");
+            destination.style.setProperty("--move-y", "0px");
+        });
+    }
+
+    updateInformation();
+    devRefresh();
+}
+
+// ==========================================
+// MOVE ANIMATION
+// ==========================================
+
+function getAnimationMoves(move) {
+    const animations = [
+        {
+            from: move.from,
+            to: move.to
+        }
+    ];
+
+    const rank = move.from[1];
+
+    if (move.flags?.includes("k")) {
+        animations.push({
+            from: `h${rank}`,
+            to: `f${rank}`
+        });
+    }
+
+    if (move.flags?.includes("q")) {
+        animations.push({
+            from: `a${rank}`,
+            to: `d${rank}`
+        });
+    }
+
+    return animations;
 }
 
 // ==========================================
@@ -481,7 +577,8 @@ function handleSquareClick(square) {
       selectedSquare = null;
       legalMoves = [];
 
-      renderBoard();
+      renderBoard({animateMoves: getAnimationMoves(result)});
+
       updateHistory();
 
       if (!game.isGameOver()) {
@@ -604,7 +701,8 @@ function makeBotMove() {
   selectedSquare = null;
   legalMoves = [];
 
-  renderBoard();
+  renderBoard({animateMoves: getAnimationMoves(result)});
+
   updateHistory();
   updateInformation();
 
@@ -655,6 +753,25 @@ function updateHistory() {
 // GAME INFORMATION
 // ==========================================
 
+// ==========================================
+// LEGAL MOVE COUNTER
+// ==========================================
+
+function updateLegalMoveCount() {
+    const counter = $("legal-move-count");
+
+    if (!counter) return;
+
+    const count = game.moves().length;
+
+    counter.textContent = count;
+
+    counter.setAttribute(
+        "aria-label",
+        `${count} movimentos legais`
+    );
+}
+
 function updateInformation() {
   let status = "Sua vez de jogar.";
 
@@ -673,7 +790,7 @@ function updateInformation() {
   }
 
   $("status").textContent = status;
-
+  updateLegalMoveCount();
   devRefresh();
 }
 
@@ -856,6 +973,7 @@ window.addEventListener("offline", () => {
 function initialize() {
   const required = [
     "board",
+    "legal-move-count",
     "status",
     "moves",
     "lia-message",
@@ -915,6 +1033,8 @@ function initialize() {
 }
 
 initialize();
+
+
 
 // ==========================================
 // END OF CHESS ACADEMY
