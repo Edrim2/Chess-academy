@@ -368,17 +368,18 @@ function devExportReport() {
 function renderBoard({ animateMoves = [] } = {}) {
     const board = $("board");
 
+    // Save the original positions of moving pieces.
     const animationStarts = animateMoves.map(move => {
         const source = board.querySelector(
-            `[data-square="${move.from}"]`
+            `[data-square="${move.from}"] .piece-glyph`
         );
 
-        return source
-            ? {
-                to: move.to,
-                rect: source.getBoundingClientRect()
-            }
-            : null;
+        if (!source) return null;
+
+        return {
+            to: move.to,
+            rect: source.getBoundingClientRect()
+        };
     }).filter(Boolean);
 
     board.innerHTML = "";
@@ -412,6 +413,7 @@ function renderBoard({ animateMoves = [] } = {}) {
 
             square.appendChild(coordinate);
 
+            // Chess piece.
             if (piece) {
                 const glyph = document.createElement("span");
 
@@ -465,33 +467,43 @@ function renderBoard({ animateMoves = [] } = {}) {
         }
     }
 
-    for (const animation of animationStarts) {
-        const destination = board.querySelector(
-            `[data-square="${animation.to}"] .piece-glyph`
-        );
-
-        if (!destination) continue;
-
-        const targetRect = destination.getBoundingClientRect();
-
-        const dx =
-            animation.rect.left +
-            animation.rect.width / 2 -
-            (targetRect.left + targetRect.width / 2);
-
-        const dy =
-            animation.rect.top +
-            animation.rect.height / 2 -
-            (targetRect.top + targetRect.height / 2);
-
-        destination.style.setProperty("--move-x", `${dx}px`);
-        destination.style.setProperty("--move-y", `${dy}px`);
-
-        destination.getBoundingClientRect();
-
+    if (animationStarts.length) {
         requestAnimationFrame(() => {
-            destination.style.setProperty("--move-x", "0px");
-            destination.style.setProperty("--move-y", "0px");
+            for (const animation of animationStarts) {
+                const destination = board.querySelector(
+                    `[data-square="${animation.to}"] .piece-glyph`
+                );
+
+                if (!destination) continue;
+
+                const targetRect =
+                    destination.getBoundingClientRect();
+
+                const dx =
+                    animation.rect.left +
+                    animation.rect.width / 2 -
+                    (targetRect.left + targetRect.width / 2);
+
+                const dy =
+                    animation.rect.top +
+                    animation.rect.height / 2 -
+                    (targetRect.top + targetRect.height / 2);
+
+                destination.animate(
+                    [
+                        {
+                            transform: `translate(${dx}px, ${dy}px)`
+                        },
+                        {
+                            transform: "translate(0px, 0px)"
+                        }
+                    ],
+                    {
+                        duration: 280,
+                        easing: "cubic-bezier(0.2, 0.8, 0.2, 1)"
+                    }
+                );
+            }
         });
     }
 

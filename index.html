@@ -282,12 +282,9 @@
     pointer-events: none;
     z-index: 2;
 
-    transform: translate(
-        var(--move-x, 0px),
-        var(--move-y, 0px)
-    );
+    transform: none;
+    transition: none;
 
-    transition: transform 240ms cubic-bezier(.2, .8, .2, 1);
     will-change: transform;
 }
 
