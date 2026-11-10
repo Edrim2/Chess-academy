@@ -489,20 +489,29 @@ function renderBoard({ animateMoves = [] } = {}) {
                     animation.rect.height / 2 -
                     (targetRect.top + targetRect.height / 2);
 
-                destination.animate(
-                    [
-                        {
-                            transform: `translate(${dx}px, ${dy}px)`
-                        },
-                        {
-                            transform: "translate(0px, 0px)"
-                        }
-                    ],
-                    {
-                        duration: 280,
-                        easing: "cubic-bezier(0.2, 0.8, 0.2, 1)"
-                    }
-                );
+              
+destination.animate(
+  [
+    {
+      transform: `translate(${dx}px, ${dy}px) scale(0.82) rotate(-5deg)`,
+      opacity: 0.75
+    },
+    {
+      transform: "translate(0px, 0px) scale(1.08) rotate(1deg)",
+      opacity: 1,
+      offset: 0.78
+    },
+    {
+      transform: "translate(0px, 0px) scale(1) rotate(0deg)",
+      opacity: 1
+    }
+  ],
+  {
+    duration: 420,
+    easing: "cubic-bezier(0.2, 0.85, 0.25, 1)"
+  }
+);
+
             }
         });
     }
@@ -626,29 +635,513 @@ function handleSquareClick(square) {
   renderBoard();
 }
 
+
 // ==========================================
-// AI ENGINE
+// AI CONTROL
 // ==========================================
+
+const MATE_SCORE = 1000000;
+const SEARCH_INFINITY = 2000000;
 
 function evaluatePosition() {
-  if (game.isCheckmate()) {
-    return game.turn() === "b" ? -100000 : 100000;
-  }
+  const board = game.board();
 
   let score = 0;
+  let nonPawnMaterial = 0;
 
-  for (const row of game.board()) {
-    for (const piece of row) {
+  const pawns = {
+    w: Array.from({ length: 8 }, () => []),
+    b: Array.from({ length: 8 }, () => [])
+    
+  };
+
+  const kings = {};
+  const bishops = { w: 0, b: 0 };
+const rooks = { w: [], b: [] };
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const piece = board[r][c];
       if (!piece) continue;
 
-      const value = pieceValues[piece.type] || 0;
+      const sign = piece.color === "w" ? 1 : -1;
+      const center = 6 - Math.abs(3.5 - r) - Math.abs(3.5 - c);
 
-      score += piece.color === "b" ? value : -value;
+      const value = pieceValues[piece.type];
+
+      let positional = 0;
+
+      if (piece.type === "p") {
+        const advance = piece.color === "w" ? 7 - r : r;
+
+        positional += advance * 8;
+        positional += (3.5 - Math.abs(3.5 - c)) * 2;
+
+        pawns[piece.color][c].push(r);
+      }
+
+      if (piece.type === "n") {
+        positional += center * 12;
+      }
+
+      if (piece.type === "b") {
+        positional += center * 6;
+        bishops[piece.color]++;
+      }
+
+      if (piece.type === "q") {
+        positional += center * 2;
+      }
+
+     if (piece.type === "r") {
+  rooks[piece.color].push({ r, c });
+}
+
+      if (piece.type === "k") {
+        kings[piece.color] = { r, c };
+      } else if (piece.type !== "p") {
+        nonPawnMaterial += value;
+      }
+
+      score += sign * (value + positional);
     }
+  }
+
+  for (const color of ["w", "b"]) {
+    const sign = color === "w" ? 1 : -1;
+
+    for (const rook of rooks[color]) {
+      const ownPawns = pawns[color][rook.c];
+      const enemy = color === "w" ? "b" : "w";
+      const enemyPawns = pawns[enemy][rook.c];
+
+      if (!ownPawns.length && !enemyPawns.length) {
+        score += sign * 18;
+      } else if (!ownPawns.length) {
+        score += sign * 9;
+      }
+
+      if (
+        (color === "w" && rook.r === 1) ||
+        (color === "b" && rook.r === 6)
+      ) {
+        score += sign * 20;
+      }
+    }
+  }
+
+  for (const color of ["w", "b"]) {
+    const sign = color === "w" ? 1 : -1;
+    const enemy = color === "w" ? "b" : "w";
+
+    for (let file = 0; file < 8; file++) {
+      const ownPawns = pawns[color][file];
+
+      if (ownPawns.length > 1) {
+        score -= sign * (ownPawns.length - 1) * 14;
+      }
+
+      for (const rank of ownPawns) {
+        const hasNeighbor =
+          (file > 0 && pawns[color][file - 1].length > 0) ||
+          (file < 7 && pawns[color][file + 1].length > 0);
+
+        if (!hasNeighbor) {
+          score -= sign * 10;
+        }
+
+        let passed = true;
+
+        for (
+          let enemyFile = Math.max(0, file - 1);
+          enemyFile <= Math.min(7, file + 1);
+          enemyFile++
+        ) {
+          for (const enemyRank of pawns[enemy][enemyFile]) {
+            const enemyAhead =
+              color === "w"
+                ? enemyRank < rank
+                : enemyRank > rank;
+
+            if (enemyAhead) {
+              passed = false;
+            }
+          }
+        }
+
+        if (passed) {
+          const advance = color === "w" ? 7 - rank : rank;
+          score += sign * (20 + advance * advance * 5);
+        }
+      }
+    }
+
+    if (bishops[color] >= 2) {
+      score += sign * 28;
+    }
+
+    
+  }
+
+  const endgame = nonPawnMaterial < 2600;
+
+  for (const color of ["w", "b"]) {
+    const king = kings[color];
+    if (!king) continue;
+
+    const sign = color === "w" ? 1 : -1;
+    const center = 6 -
+      Math.abs(3.5 - king.r) -
+      Math.abs(3.5 - king.c);
+
+    if (endgame) {
+      score += sign * center * 12;
+    } else {
+      score -= sign * Math.max(0, center) * 8;
+
+      const castled =
+        (color === "w" && king.r === 7 &&
+          (king.c === 2 || king.c === 6)) ||
+        (color === "b" && king.r === 0 &&
+          (king.c === 2 || king.c === 6));
+
+      if (castled) {
+        score += sign * 20;
+      }
+    }
+  }
+
+  if (game.isCheck()) {
+    score += game.turn() === "w" ? -25 : 25;
   }
 
   return score;
 }
+
+function evaluateForSideToMove(ply = 0) {
+  if (game.isCheckmate()) {
+    return -MATE_SCORE + ply;
+  }
+
+  if (game.isDraw()) {
+    return 0;
+  }
+
+  const whiteScore = evaluatePosition();
+
+  return game.turn() === "w"
+    ? whiteScore
+    : -whiteScore;
+}
+
+function movePriority(move) {
+  let score = 0;
+
+  if (move.captured) {
+    score += 100000 +
+      (pieceValues[move.captured] || 0) * 10 -
+      (pieceValues[move.piece] || 0);
+  }
+
+  if (move.promotion) {
+    score += 80000 + (pieceValues[move.promotion] || 0);
+  }
+
+  if (move.san?.includes("+")) {
+    score += 5000;
+  }
+
+  if (move.san?.includes("#")) {
+    score += 1000000;
+  }
+
+  return score;
+}
+
+function orderMoves(moves) {
+  return moves.sort(
+    (a, b) => movePriority(b) - movePriority(a)
+  );
+}
+
+function shouldStopSearch(ctx) {
+  if (ctx.stopped) return true;
+
+  if (
+    ctx.nodes >= ctx.maxNodes ||
+    performance.now() >= ctx.deadline
+  ) {
+    ctx.stopped = true;
+  }
+
+  return ctx.stopped;
+}
+
+function quiescenceSearch(alpha, beta, ply, ctx, remaining = 5) {
+  if (shouldStopSearch(ctx)) {
+    return evaluateForSideToMove(ply);
+  }
+
+  ctx.nodes++;
+
+  if (game.isCheckmate()) {
+    return -MATE_SCORE + ply;
+  }
+
+  if (game.isDraw()) {
+    return 0;
+  }
+
+  const inCheck = game.isCheck();
+  const standPat = evaluateForSideToMove(ply);
+
+  if (remaining <= -2) {
+    return standPat;
+  }
+
+  if (!inCheck) {
+    if (standPat >= beta) return beta;
+
+    alpha = Math.max(alpha, standPat);
+
+    if (remaining <= 0) {
+      return alpha;
+    }
+  }
+
+  let moves = game.moves({ verbose: true });
+
+  if (!inCheck) {
+    moves = moves.filter(move =>
+      move.captured || move.promotion
+    );
+  }
+
+  orderMoves(moves);
+
+  for (const move of moves) {
+    game.move({
+      from: move.from,
+      to: move.to,
+      promotion: move.promotion || "q"
+    });
+
+    let score;
+
+    try {
+      score = -quiescenceSearch(
+        -beta,
+        -alpha,
+        ply + 1,
+        ctx,
+        remaining - 1
+      );
+    } finally {
+      game.undo();
+    }
+
+    if (ctx.stopped) break;
+
+    if (score >= beta) {
+      return beta;
+    }
+
+    alpha = Math.max(alpha, score);
+  }
+
+  return alpha;
+}
+
+function negamax(depth, alpha, beta, ply, ctx) {
+  if (shouldStopSearch(ctx)) {
+    return evaluateForSideToMove(ply);
+  }
+
+  ctx.nodes++;
+
+  if (game.isCheckmate()) {
+    return -MATE_SCORE + ply;
+  }
+
+  if (game.isDraw()) {
+    return 0;
+  }
+
+  if (depth <= 0) {
+    return quiescenceSearch(alpha, beta, ply, ctx);
+  }
+
+  const originalAlpha = alpha;
+  const originalBeta = beta;
+
+  const key = game.fen();
+  const cached = ctx.table.get(key);
+
+  if (cached && cached.depth >= depth) {
+    if (cached.bound === "exact") return cached.score;
+
+    if (cached.bound === "lower") {
+      alpha = Math.max(alpha, cached.score);
+    } else if (cached.bound === "upper") {
+      beta = Math.min(beta, cached.score);
+    }
+
+    if (alpha >= beta) {
+      return cached.score;
+    }
+  }
+
+  const moves = orderMoves(game.moves({ verbose: true }));
+
+  if (!moves.length) {
+    return game.isCheck() ? -MATE_SCORE + ply : 0;
+  }
+
+  let bestScore = -SEARCH_INFINITY;
+
+  for (const move of moves) {
+    game.move({
+      from: move.from,
+      to: move.to,
+      promotion: move.promotion || "q"
+    });
+
+    let score;
+
+    try {
+      score = -negamax(
+        depth - 1,
+        -beta,
+        -alpha,
+        ply + 1,
+        ctx
+      );
+    } finally {
+      game.undo();
+    }
+
+    if (ctx.stopped) break;
+
+    bestScore = Math.max(bestScore, score);
+    alpha = Math.max(alpha, score);
+
+    if (alpha >= beta) {
+      break;
+    }
+  }
+
+  if (!ctx.stopped) {
+    let bound = "exact";
+
+    if (bestScore <= originalAlpha) {
+      bound = "upper";
+    } else if (bestScore >= originalBeta) {
+      bound = "lower";
+    }
+
+    if (ctx.table.size > 40000) {
+      ctx.table.clear();
+    }
+
+    ctx.table.set(key, {
+      depth,
+      score: bestScore,
+      bound
+    });
+  }
+
+  return bestScore;
+}
+
+function findBestMove({
+  maxDepth = 3,
+  maxMs = 500,
+  maxNodes = 30000,
+  randomTop = 1
+} = {}) {
+  const rootMoves = orderMoves(
+    game.moves({ verbose: true })
+  );
+
+  if (!rootMoves.length) return null;
+
+  const ctx = {
+    nodes: 0,
+    maxNodes,
+    deadline: performance.now() + maxMs,
+    stopped: false,
+    table: new Map()
+  };
+
+  let bestMove = rootMoves[0];
+  let bestScore = -SEARCH_INFINITY;
+  let completedResults = [];
+
+  for (let depth = 1; depth <= maxDepth; depth++) {
+    const results = [];
+    let alpha = -SEARCH_INFINITY;
+
+    for (const move of rootMoves) {
+      game.move({
+        from: move.from,
+        to: move.to,
+        promotion: move.promotion || "q"
+      });
+
+      let score;
+
+      try {
+        score = -negamax(
+          depth - 1,
+          -SEARCH_INFINITY,
+          -alpha,
+          1,
+          ctx
+        );
+      } finally {
+        game.undo();
+      }
+
+      if (ctx.stopped) break;
+
+      results.push({ move, score });
+      alpha = Math.max(alpha, score);
+    }
+
+    if (ctx.stopped || !results.length) {
+      break;
+    }
+
+    results.sort((a, b) => b.score - a.score);
+
+    completedResults = results;
+    bestMove = results[0].move;
+    bestScore = results[0].score;
+  }
+
+  const candidates = completedResults.slice(
+    0,
+    Math.min(
+      Math.max(1, randomTop),
+      completedResults.length
+    )
+  );
+
+  if (candidates.length > 1) {
+    bestMove =
+      candidates[Math.floor(Math.random() * candidates.length)].move;
+  }
+
+  return {
+    move: bestMove,
+    score: bestScore,
+    nodes: ctx.nodes
+  };
+}
+
+// ==========================================
+// OPPONENT AI
+// ==========================================
 
 function makeBotMove() {
   botTimer = null;
@@ -659,61 +1152,40 @@ function makeBotMove() {
     return;
   }
 
-  const moves = game.moves({ verbose: true });
+  const depth = [0, 1, 2, 2, 3, 4][botLevel];
 
-  if (!moves.length) {
+  const result = findBestMove({
+    maxDepth: depth,
+    maxMs: botLevel >= 5 ? 750 : 500,
+    maxNodes: botLevel >= 5 ? 45000 : 30000,
+    randomTop: [0, 5, 4, 2, 1, 1][botLevel]
+  });
+
+  if (!result?.move) {
     thinking = false;
     finishGame();
     return;
   }
 
-  const scoredMoves = [];
+  const move = result.move;
 
-  for (const move of moves) {
-    game.move({
-      from: move.from,
-      to: move.to,
-      promotion: "q"
-    });
-
-    const score = evaluatePosition();
-
-    game.undo();
-
-    scoredMoves.push({ move, score });
-  }
-
-  scoredMoves.sort((a, b) => b.score - a.score);
-
-  const randomness = {
-    1: 8,
-    2: 6,
-    3: 4,
-    4: 2,
-    5: 1
-  };
-
-  const candidates = scoredMoves.slice(
-    0,
-    randomness[botLevel]
-  );
-
-  const chosen =
-    candidates[Math.floor(Math.random() * candidates.length)];
-
-  const result = game.move({
-    from: chosen.move.from,
-    to: chosen.move.to,
-    promotion: "q"
+  const played = game.move({
+    from: move.from,
+    to: move.to,
+    promotion: move.promotion || "q"
   });
 
-  devLog(`Jogada da IA: ${result.san}`);
+  devLog(
+    `IA: ${played.san} | ${result.nodes} nós analisados`
+  );
 
   thinking = false;
   selectedSquare = null;
   legalMoves = [];
 
-  renderBoard({animateMoves: getAnimationMoves(result)});
+  renderBoard({
+    animateMoves: getAnimationMoves(played)
+  });
 
   updateHistory();
   updateInformation();
@@ -723,11 +1195,12 @@ function makeBotMove() {
   } else {
     setLia(
       game.isCheck()
-        ? "Xeque! Cuidado com o rei."
-        : "Minha jogada foi feita. Sua vez!"
+        ? "Xeque! Preciso proteger meu rei."
+        : `Minha jogada foi ${played.san}. Sua vez!`
     );
   }
 }
+
 
 // ==========================================
 // HISTORY
@@ -760,6 +1233,47 @@ function updateHistory() {
 
   container.scrollTop = container.scrollHeight;
 }
+
+
+// ==========================================
+// THEME SYSTEM
+// ==========================================
+
+function applyTheme(theme) {
+  const selectedTheme =
+    theme === "light" ? "light" : "dark";
+
+  document.body.dataset.theme = selectedTheme;
+
+  const button = $("theme-toggle");
+
+  if (button) {
+    button.textContent =
+      selectedTheme === "dark"
+        ? "Modo claro"
+        : "Modo escuro";
+
+    button.setAttribute(
+      "aria-pressed",
+      String(selectedTheme === "light")
+    );
+  }
+
+  try {
+    localStorage.setItem(
+      "chess_academy_theme",
+      selectedTheme
+    );
+  } catch {}
+}
+
+function toggleTheme() {
+  const current =
+    document.body.dataset.theme || "dark";
+
+  applyTheme(current === "dark" ? "light" : "dark");
+}
+
 
 // ==========================================
 // GAME INFORMATION
@@ -806,23 +1320,179 @@ function updateInformation() {
   devRefresh();
 }
 
+
+// ==========================================
+// GAME RESULT
+// ==========================================
+
+let confettiFrame = null;
+let confettiParticles = [];
+
+function stopConfetti() {
+  if (confettiFrame !== null) {
+    cancelAnimationFrame(confettiFrame);
+    confettiFrame = null;
+  }
+
+  confettiParticles = [];
+
+  const canvas = $("confetti-canvas");
+  const ctx = canvas?.getContext("2d");
+
+  if (canvas && ctx) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+}
+
+function startConfetti() {
+  stopConfetti();
+
+  if (
+    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+  ) {
+    return;
+  }
+
+  const canvas = $("confetti-canvas");
+  const stage = $("board-stage");
+
+  if (!canvas || !stage) return;
+
+  const rect = stage.getBoundingClientRect();
+  const width = rect.width;
+  const height = rect.height;
+
+  if (!width || !height) return;
+
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  confettiParticles = Array.from({ length: 160 }, () => ({
+    x: Math.random() * width,
+    y: -Math.random() * height * 0.5,
+
+    vx: (Math.random() - 0.5) * 5,
+    vy: 2 + Math.random() * 4,
+
+    width: 4 + Math.random() * 5,
+    height: 7 + Math.random() * 9,
+
+    rotation: Math.random() * Math.PI * 2,
+    spin: (Math.random() - 0.5) * 0.16,
+
+    hue: Math.floor(Math.random() * 360)
+  }));
+
+  function animate() {
+    ctx.clearRect(0, 0, width, height);
+
+    let remaining = 0;
+
+    for (const particle of confettiParticles) {
+      particle.x += particle.vx;
+      particle.y += particle.vy;
+      particle.vy += 0.035;
+      particle.rotation += particle.spin;
+      particle.vx *= 0.998;
+
+      if (particle.y > height + 30) continue;
+
+      remaining++;
+
+      ctx.save();
+      ctx.translate(particle.x, particle.y);
+      ctx.rotate(particle.rotation);
+
+      ctx.fillStyle = `hsl(${particle.hue}, 90%, 60%)`;
+
+      ctx.fillRect(
+        -particle.width / 2,
+        -particle.height / 2,
+        particle.width,
+        particle.height
+      );
+
+      ctx.restore();
+    }
+
+    if (remaining > 0) {
+      confettiFrame = requestAnimationFrame(animate);
+    } else {
+      stopConfetti();
+    }
+  }
+
+  confettiFrame = requestAnimationFrame(animate);
+}
+
+function showGameResult(message, won = false) {
+  const overlay = $("game-result");
+  const resultMessage = $("result-message");
+
+  if (!overlay || !resultMessage) return;
+
+  resultMessage.textContent = message;
+  overlay.hidden = false;
+
+  if (won) {
+    startConfetti();
+  } else {
+    stopConfetti();
+  }
+}
+
+function hideGameResult() {
+  const overlay = $("game-result");
+
+  if (overlay) {
+    overlay.hidden = true;
+  }
+
+  stopConfetti();
+}
+
+
+
 function finishGame() {
   thinking = false;
 
   updateInformation();
 
   if (game.isCheckmate()) {
-    setLia(
-      game.turn() === "w"
-        ? "Xeque-mate! O adversário venceu esta partida."
-        : "Xeque-mate! Você venceu! Excelente partida!"
-    );
+    const playerWon = game.turn() !== playerColor;
+
+    if (playerWon) {
+      setLia("Xeque-mate! Você venceu! Excelente partida!");
+
+      showGameResult(
+        "XEQUE-MATE! VOCÊ VENCEU!",
+        true
+      );
+    } else {
+      setLia("Xeque-mate. O adversário venceu esta partida.");
+
+      showGameResult(
+        "VOCÊ PERDEU!",
+        false
+      );
+    }
   } else {
     setLia("A partida terminou empatada. Vamos tentar outra?");
+
+    showGameResult(
+      "EMPATE!",
+      false
+    );
   }
 
   devLog("Partida finalizada.", "SUCCESS");
 }
+
 
 // ==========================================
 // GAME CONTROLS
@@ -837,6 +1507,7 @@ function clearBotTimer() {
 
 function newGame() {
   clearBotTimer();
+hideGameResult();
 
   game.reset();
 
@@ -856,6 +1527,7 @@ function undoMove() {
   clearBotTimer();
 
   thinking = false;
+hideGameResult()
 
   if (game.history().length === 0) return;
 
@@ -879,20 +1551,25 @@ function undoMove() {
   devLog("Jogada desfeita.");
 }
 
+
 function showHint() {
   if (thinking || game.turn() !== playerColor) {
     setLia("Espere sua vez para receber uma dica.");
     return;
   }
 
-  const moves = game.moves({ verbose: true });
+  const result = findBestMove({
+    maxDepth: 3,
+    maxMs: 500,
+    maxNodes: 25000
+  });
 
-  if (!moves.length) {
-    setLia("Não há movimentos disponíveis.");
+  if (!result?.move) {
+    setLia("Não encontrei um movimento recomendado.");
     return;
   }
 
-  const move = moves[Math.floor(Math.random() * moves.length)];
+  const move = result.move;
 
   selectedSquare = move.from;
 
@@ -903,28 +1580,67 @@ function showHint() {
 
   renderBoard();
 
-  setLia(
-    `Dica: observe a peça em ${move.from}. ` +
-    `Um movimento possível é ${move.from} para ${move.to}.`
-  );
+  let explanation = `Minha sugestão é ${move.san}: ${move.from} para ${move.to}.`;
+
+  if (move.captured) {
+    explanation += " Esse movimento captura uma peça.";
+  }
+
+  if (move.promotion) {
+    explanation += " Ele também permite promover seu peão.";
+  }
+
+  setLia(explanation);
 }
 
 function analyzePosition() {
   if (game.isCheckmate()) {
     setLia("A partida terminou em xeque-mate.");
-  } else if (game.isDraw()) {
-    setLia("A posição terminou empatada.");
-  } else if (game.isCheck()) {
-    setLia("Seu rei está em xeque. Procure uma defesa!");
-  } else {
-    setLia(
-      `Existem ${game.moves().length} movimentos legais. ` +
-      "Observe o centro e a segurança do rei."
-    );
+    return;
   }
 
-  devLog("Análise básica da posição solicitada.");
+  if (game.isDraw()) {
+    setLia("A posição terminou empatada.");
+    return;
+  }
+
+  if (game.isCheck()) {
+    setLia("Seu rei está em xeque. Procure uma defesa imediatamente!");
+  }
+
+  const result = findBestMove({
+    maxDepth: 3,
+    maxMs: 600,
+    maxNodes: 30000
+  });
+
+  if (!result?.move) {
+    setLia("Não foi possível analisar esta posição.");
+    return;
+  }
+
+  const whiteScore =
+    game.turn() === "w"
+      ? result.score
+      : -result.score;
+
+  let advantage = "posição equilibrada";
+
+  if (whiteScore > 150) {
+    advantage = "vantagem das brancas";
+  } else if (whiteScore < -150) {
+    advantage = "vantagem das pretas";
+  }
+
+  setLia(
+    `Análise: ${advantage}. ` +
+    `Melhor movimento encontrado: ${result.move.san}. ` +
+    `Foram analisados ${result.nodes} nós.`
+  );
+
+  devLog("Análise avançada solicitada.");
 }
+
 
 function flipBoard() {
   flipped = !flipped;
@@ -1003,6 +1719,12 @@ function initialize() {
     "dev-test-animation",
     "dev-test-sound",
     "dev-export",
+    "theme-toggle",
+"board-stage",
+"game-result",
+"result-message",
+"result-restart",
+"confetti-canvas",
     "dev-clear-log",
     "dev-close",
     "app-version"
@@ -1017,6 +1739,19 @@ function initialize() {
     );
     return;
   }
+
+  $("theme-toggle").addEventListener("click", toggleTheme);
+
+$("result-restart").addEventListener("click", newGame);
+
+let savedTheme = "dark";
+
+try {
+  savedTheme =
+    localStorage.getItem("chess_academy_theme") || "dark";
+} catch {}
+
+applyTheme(savedTheme);
 
   $("new-game").addEventListener("click", newGame);
   $("undo").addEventListener("click", undoMove);

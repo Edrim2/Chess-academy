@@ -1,3 +1,4 @@
+
 const OWNER = "Edrim2";
 const REPOSITORY = "Chess-academy";
 
@@ -6,23 +7,84 @@ const RELEASES_API =
 
 const $ = id => document.getElementById(id);
 
+function showPanel(visible) {
+  const panel = $("update-panel");
+  if (panel) panel.style.display = visible ? "block" : "none";
+}
+
+function getBuildNumber(release) {
+  const tag = String(release.tag_name || "");
+  const match = tag.match(/build[-_]?(\d+)/i);
+
+  return match ? Number(match[1]) : 0;
+}
+
+async function installUpdate(downloadUrl, button, message) {
+  button.disabled = true;
+  button.textContent = "Preparando atualização...";
+
+  try {
+    // Native Android implementation required for in-app APK installation.
+    const nativeUpdater = window.AndroidUpdater;
+
+    if (typeof nativeUpdater?.installApkFromUrl === "function") {
+      const result = nativeUpdater.installApkFromUrl(downloadUrl);
+
+      if (result && typeof result.then === "function") {
+        await result;
+      }
+
+      message.textContent =
+        "Atualização preparada. Confirme a instalação na janela do Android.";
+
+      button.textContent = "Instalação iniciada";
+      return;
+    }
+
+    // Browser fallback.
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = "";
+    link.rel = "noopener";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    message.textContent =
+      "APK baixado. Abra o arquivo e confirme a instalação para atualizar o aplicativo.";
+
+    button.textContent = "Baixar novamente";
+  } catch (error) {
+    console.error("Erro ao instalar atualização:", error);
+
+    message.textContent =
+      "Não foi possível iniciar a instalação. Tente novamente.";
+
+    button.disabled = false;
+    button.textContent = "Instalar atualização";
+  }
+}
+
 async function checkForUpdates() {
   const panel = $("update-panel");
   const message = $("update-message");
   const download = $("update-download");
+  const checkButton = $("update-check");
 
   if (!panel || !message || !download) return;
 
-  panel.style.display = "block";
+  if (checkButton) checkButton.disabled = true;
+
   download.style.display = "none";
-  message.textContent = "Verificando atualizações...";
+  download.disabled = false;
+  download.textContent = "Instalar atualização";
 
   try {
     const [versionResponse, releaseResponse] = await Promise.all([
-      fetch("./version.json?check=" + Date.now(), {
+      fetch(`./version.json?check=${Date.now()}`, {
         cache: "no-store"
       }),
-      fetch(RELEASES_API, {
+      fetch(`${RELEASES_API}?check=${Date.now()}`, {
         cache: "no-store",
         headers: {
           Accept: "application/vnd.github+json"
@@ -30,55 +92,67 @@ async function checkForUpdates() {
       })
     ]);
 
+    if (!versionResponse.ok) {
+      throw new Error("Não foi possível ler version.json");
+    }
+
     if (!releaseResponse.ok) {
       throw new Error("GitHub indisponível");
     }
 
-    const installed = versionResponse.ok
-      ? await versionResponse.json()
-      : { build: 0 };
-
+    const installed = await versionResponse.json();
     const release = await releaseResponse.json();
 
-    const latestBuild = Number(
-      String(release.tag_name || "").replace(/^build-/, "")
+    const installedBuild = Number(installed.build);
+    const latestBuild = getBuildNumber(release);
+
+    if (
+      !Number.isFinite(installedBuild) ||
+      installedBuild < 0 ||
+      !latestBuild
+    ) {
+      throw new Error("Número de build inválido");
+    }
+
+    if (latestBuild <= installedBuild) {
+      showPanel(false);
+      return;
+    }
+
+    const apk = (release.assets || []).find(asset =>
+      String(asset.name || "").toLowerCase().endsWith(".apk")
     );
 
-    const installedBuild = Number(installed.build || 0);
+    showPanel(true);
 
-    if (!latestBuild) {
-      throw new Error("Versão inválida");
+    if (!apk) {
+      message.textContent =
+        `Build ${latestBuild} encontrada, mas o APK ainda não está disponível.`;
+      return;
     }
 
-    if (latestBuild > installedBuild) {
-      const apk = (release.assets || []).find(asset =>
-        asset.name.toLowerCase().endsWith(".apk")
+    message.textContent =
+      `Nova versão disponível: build ${latestBuild}.`;
+
+    download.style.display = "block";
+
+    download.onclick = () => {
+      installUpdate(
+        apk.browser_download_url,
+        download,
+        message
       );
-
-      if (!apk) {
-        message.textContent =
-          "Nova versão encontrada, mas o APK ainda não está disponível.";
-        return;
-      }
-
-      message.textContent =
-        `Nova versão disponível: build ${latestBuild}!`;
-
-      download.style.display = "block";
-
-      download.onclick = () => {
-        window.open(apk.browser_download_url, "_blank");
-      };
-    } else {
-      message.textContent =
-        "Você já está usando a versão mais recente!";
-    }
+    };
 
   } catch (error) {
-    message.textContent =
-      "Não foi possível verificar. Confira sua conexão e tente novamente.";
-
     console.warn("Atualizador:", error);
+
+    showPanel(true);
+
+    message.textContent =
+      "Não foi possível verificar atualizações. Confira sua conexão e tente novamente.";
+  } finally {
+    if (checkButton) checkButton.disabled = false;
   }
 }
 

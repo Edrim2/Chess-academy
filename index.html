@@ -38,6 +38,8 @@
       padding: 15px;
     }
 
+    
+
     .panel {
       background: #191f2c;
       border: 1px solid #2b3343;
@@ -332,6 +334,154 @@
     .dev-pulse {
       animation: devPulse 1s ease-in-out 2;
     }
+
+
+/* BOARD EFFECTS */
+
+.board-stage {
+  position: relative;
+  width: min(100%, 640px);
+  margin: auto;
+}
+
+#confetti-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.game-result {
+  position: absolute;
+  inset: 0;
+  z-index: 11;
+
+  display: grid;
+  place-items: center;
+
+  background: rgba(5, 8, 15, 0.76);
+  backdrop-filter: blur(3px);
+  border-radius: 8px;
+}
+
+.game-result[hidden] {
+  display: none;
+}
+
+.game-result-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  padding: 24px;
+  text-align: center;
+}
+
+.result-message {
+  color: #ffdf45;
+  font-weight: 900;
+  font-size: clamp(23px, 5vw, 42px);
+  text-shadow:
+    0 3px 8px #000,
+    0 0 20px #e8bd22aa;
+}
+
+#result-restart {
+  min-width: 180px;
+  padding: 13px 20px;
+  font-size: 15px;
+}
+
+/* BETTER PIECE ANIMATIONS */
+
+#board .piece-glyph {
+  will-change: transform, opacity;
+}
+
+#board .square {
+  transition: background-color 130ms ease;
+}
+
+#board .piece-glyph {
+  filter: drop-shadow(0 3px 2px #0005);
+}
+
+/* LIGHT THEME */
+
+body[data-theme="light"] {
+  background: #edf1f8;
+  color: #1c2738;
+}
+
+body[data-theme="light"] header {
+  background: #ffffff;
+  border-color: #d8dfeb;
+}
+
+body[data-theme="light"] header p {
+  color: #64738a;
+}
+
+body[data-theme="light"] .panel {
+  background: #ffffff;
+  border-color: #d5deeb;
+  box-shadow: 0 8px 24px #24365312;
+}
+
+body[data-theme="light"] .action,
+body[data-theme="light"] select {
+  background: #e9eef7;
+  color: #1d2b40;
+  border-color: #cbd5e4;
+}
+
+body[data-theme="light"] #status {
+  background: #e9eff8;
+  color: #315b91;
+}
+
+body[data-theme="light"] #lia-message,
+body[data-theme="light"] #lesson {
+  color: #34445a;
+}
+
+body[data-theme="light"] .move-row {
+  border-color: #dce3ed;
+}
+
+body[data-theme="light"] .dev-panel {
+  background: #edf3fc;
+}
+
+body[data-theme="light"] .dev-stat {
+  background: #ffffff;
+  border-color: #d4deec;
+}
+
+body[data-theme="light"] .dev-stat strong {
+  color: #1d2b40;
+}
+
+body[data-theme="light"] .dev-log {
+  background: #f5f7fb;
+  color: #28613b;
+  border-color: #d4deec;
+}
+
+body[data-theme="light"] footer {
+  color: #68778d;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #board .square,
+  #board .piece-glyph {
+    transition: none !important;
+  }
+}
+
+
   </style>
 </head>
 
@@ -347,7 +497,25 @@
     <section class="panel">
       <h2>Tabuleiro</h2>
 
-    <div id="board" class="board"></div>
+   <div class="board-stage" id="board-stage">
+  <div id="board" class="board"></div>
+
+  <canvas id="confetti-canvas" aria-hidden="true"></canvas>
+
+  <div id="game-result" class="game-result" hidden>
+    <div class="game-result-card">
+      <div id="result-message" class="result-message">
+        XEQUE-MATE!
+      </div>
+
+      <button id="result-restart" class="action primary">
+        Jogar novamente
+      </button>
+
+      
+    </div>
+  </div>
+</div>
 
 <div id="status">Carregando partida...</div>
 
@@ -363,6 +531,7 @@
         <button class="action" id="analyze">Analisar</button>
         <button class="action" id="flip">Girar tabuleiro</button>
         <button class="action" id="lesson-button">Aula rápida</button>
+        <button class="action" id="theme-toggle">Modo claro</button>
       </div>
     </section>
 
