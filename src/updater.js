@@ -24,7 +24,6 @@ async function installUpdate(downloadUrl, button, message) {
   button.textContent = "Preparando atualização...";
 
   try {
-    // Native Android implementation required for in-app APK installation.
     const nativeUpdater = window.AndroidUpdater;
 
     if (typeof nativeUpdater?.installApkFromUrl === "function") {
@@ -41,7 +40,6 @@ async function installUpdate(downloadUrl, button, message) {
       return;
     }
 
-    // Browser fallback.
     const link = document.createElement("a");
     link.href = downloadUrl;
     link.download = "";
