@@ -365,159 +365,120 @@ function devExportReport() {
 // CHESS BOARD
 // ==========================================
 
-function renderBoard({ animateMoves = [] } = {}) {
-    const board = $("board");
+const boardSquares = new Map();
+let boardClickHandlerInstalled = false;
 
-    // Save the original positions of moving pieces.
-    const animationStarts = animateMoves.map(move => {
-        const source = board.querySelector(
-            `[data-square="${move.from}"] .piece-glyph`
-        );
+function initializeBoardElements() {
+  const board = $("board");
+  if (boardSquares.size === 64) return;
 
-        if (!source) return null;
-
-        return {
-            to: move.to,
-            rect: source.getBoundingClientRect()
-        };
-    }).filter(Boolean);
-
-    board.innerHTML = "";
-
-    const position = game.board();
-    const history = game.history({ verbose: true });
-    const lastMove = history[history.length - 1];
-
-    for (let row = 0; row < 8; row++) {
-        for (let col = 0; col < 8; col++) {
-            const rank = flipped ? row + 1 : 8 - row;
-            const file = flipped ? 7 - col : col;
-
-            const squareName = getSquareName(file, rank);
-            const piece = position[8 - rank][file];
-
-            const square = document.createElement("button");
-
-            square.type = "button";
-            square.className =
-                "square " +
-                ((file + rank) % 2 === 0 ? "light" : "dark");
-
-            square.dataset.square = squareName;
-            square.setAttribute("aria-label", squareName);
-
-            const coordinate = document.createElement("span");
-
-            coordinate.className = "square-coordinate";
-            coordinate.textContent = squareName;
-
-            square.appendChild(coordinate);
-
-            // Chess piece.
-            if (piece) {
-                const glyph = document.createElement("span");
-
-                glyph.className = "piece-glyph";
-                glyph.textContent =
-                    symbols[piece.color + piece.type];
-
-                glyph.dataset.piece =
-                    piece.color + piece.type;
-
-                square.classList.add(
-                    piece.color === "w"
-                        ? "white-piece"
-                        : "black-piece"
-                );
-
-                square.appendChild(glyph);
-            }
-
-            if (selectedSquare === squareName) {
-                square.classList.add("selected");
-            }
-
-            const possible = legalMoves.find(
-                move => move.to === squareName
-            );
-
-            if (possible) {
-                square.classList.add("possible");
-
-                if (piece) {
-                    square.classList.add("capture");
-                }
-            }
-
-            if (
-                lastMove &&
-                (
-                    lastMove.from === squareName ||
-                    lastMove.to === squareName
-                )
-            ) {
-                square.classList.add("last-move");
-            }
-
-            square.addEventListener("click", () => {
-                handleSquareClick(squareName);
-            });
-
-            board.appendChild(square);
-        }
+  const fragment = document.createDocumentFragment();
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      const rank = 8 - row;
+      const file = col;
+      const squareName = getSquareName(file, rank);
+      const square = document.createElement("button");
+      square.type = "button";
+      square.className = "square";
+      square.dataset.square = squareName;
+      square.setAttribute("aria-label", squareName);
+      const coordinate = document.createElement("span");
+      coordinate.className = "square-coordinate";
+      coordinate.textContent = squareName;
+      square.appendChild(coordinate);
+      boardSquares.set(squareName, square);
+      fragment.appendChild(square);
     }
-
-    if (animationStarts.length) {
-        requestAnimationFrame(() => {
-            for (const animation of animationStarts) {
-                const destination = board.querySelector(
-                    `[data-square="${animation.to}"] .piece-glyph`
-                );
-
-                if (!destination) continue;
-
-                const targetRect =
-                    destination.getBoundingClientRect();
-
-                const dx =
-                    animation.rect.left +
-                    animation.rect.width / 2 -
-                    (targetRect.left + targetRect.width / 2);
-
-                const dy =
-                    animation.rect.top +
-                    animation.rect.height / 2 -
-                    (targetRect.top + targetRect.height / 2);
-
-              
-destination.animate(
-  [
-    {
-      transform: `translate(${dx}px, ${dy}px) scale(0.82) rotate(-5deg)`,
-      opacity: 0.75
-    },
-    {
-      transform: "translate(0px, 0px) scale(1.08) rotate(1deg)",
-      opacity: 1,
-      offset: 0.78
-    },
-    {
-      transform: "translate(0px, 0px) scale(1) rotate(0deg)",
-      opacity: 1
-    }
-  ],
-  {
-    duration: 420,
-    easing: "cubic-bezier(0.2, 0.85, 0.25, 1)"
   }
-);
+  board.appendChild(fragment);
 
-            }
-        });
+  if (!boardClickHandlerInstalled) {
+    board.addEventListener("click", event => {
+      const square = event.target.closest("[data-square]");
+      if (square && board.contains(square)) handleSquareClick(square.dataset.square);
+    });
+    boardClickHandlerInstalled = true;
+  }
+}
+
+function renderBoard({ animateMoves = [] } = {}) {
+  const board = $("board");
+  initializeBoardElements();
+
+  const animationStarts = animateMoves.map(move => {
+    const source = boardSquares.get(move.from)?.querySelector(".piece-glyph");
+    return source ? { to: move.to, rect: source.getBoundingClientRect() } : null;
+  }).filter(Boolean);
+
+  // Reorder the persistent square nodes when the board is flipped.
+  const orderedSquares = document.createDocumentFragment();
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      const rank = flipped ? row + 1 : 8 - row;
+      const file = flipped ? 7 - col : col;
+      orderedSquares.appendChild(boardSquares.get(getSquareName(file, rank)));
     }
+  }
+  board.appendChild(orderedSquares);
 
-    updateInformation();
-    devRefresh();
+  const position = game.board();
+  const history = game.history({ verbose: true });
+  const lastMove = history[history.length - 1];
+  const legalTargets = new Set(legalMoves.map(move => move.to));
+
+  for (const [squareName, square] of boardSquares) {
+    const file = files.indexOf(squareName[0]);
+    const rank = Number(squareName[1]);
+    const piece = position[8 - rank][file];
+    const classes = ["square", (file + rank) % 2 === 0 ? "light" : "dark"];
+
+    if (piece) classes.push(piece.color === "w" ? "white-piece" : "black-piece");
+    if (selectedSquare === squareName) classes.push("selected");
+    if (legalTargets.has(squareName)) {
+      classes.push("possible");
+      if (piece) classes.push("capture");
+    }
+    if (lastMove && (lastMove.from === squareName || lastMove.to === squareName)) classes.push("last-move");
+    square.className = classes.join(" ");
+
+    let glyph = square.querySelector(".piece-glyph");
+    const pieceCode = piece ? piece.color + piece.type : null;
+    if (!pieceCode && glyph) {
+      glyph.remove();
+    } else if (pieceCode && (!glyph || glyph.dataset.piece !== pieceCode)) {
+      if (glyph) glyph.remove();
+      glyph = document.createElement("span");
+      glyph.className = "piece-glyph";
+      glyph.dataset.piece = pieceCode;
+      glyph.textContent = symbols[pieceCode];
+      square.appendChild(glyph);
+    }
+  }
+
+  if (animationStarts.length) {
+    requestAnimationFrame(() => {
+      for (const animation of animationStarts) {
+        const destination = boardSquares.get(animation.to)?.querySelector(".piece-glyph");
+        if (!destination) continue;
+        const targetRect = destination.getBoundingClientRect();
+        const dx = animation.rect.left + animation.rect.width / 2 - (targetRect.left + targetRect.width / 2);
+        const dy = animation.rect.top + animation.rect.height / 2 - (targetRect.top + targetRect.height / 2);
+        destination.classList.add("is-animating");
+        const animationEffect = destination.animate([
+          { transform: `translate(${dx}px, ${dy}px) scale(0.82) rotate(-5deg)`, opacity: 0.75 },
+          { transform: "translate(0px, 0px) scale(1.08) rotate(1deg)", opacity: 1, offset: 0.78 },
+          { transform: "translate(0px, 0px) scale(1) rotate(0deg)", opacity: 1 }
+        ], { duration: 420, easing: "cubic-bezier(0.2, 0.85, 0.25, 1)" });
+        animationEffect.finished.then(
+          () => destination.classList.remove("is-animating"),
+          () => destination.classList.remove("is-animating")
+        );
+      }
+    });
+  }
+
+  updateInformation();
 }
 
 // ==========================================
@@ -640,510 +601,41 @@ function handleSquareClick(square) {
 // AI CONTROL
 // ==========================================
 
-const MATE_SCORE = 1000000;
-const SEARCH_INFINITY = 2000000;
-
-function evaluatePosition() {
-  const board = game.board();
-
-  let score = 0;
-  let nonPawnMaterial = 0;
-
-  const pawns = {
-    w: Array.from({ length: 8 }, () => []),
-    b: Array.from({ length: 8 }, () => [])
-    
-  };
-
-  const kings = {};
-  const bishops = { w: 0, b: 0 };
-const rooks = { w: [], b: [] };
-
-  for (let r = 0; r < 8; r++) {
-    for (let c = 0; c < 8; c++) {
-      const piece = board[r][c];
-      if (!piece) continue;
-
-      const sign = piece.color === "w" ? 1 : -1;
-      const center = 6 - Math.abs(3.5 - r) - Math.abs(3.5 - c);
-
-      const value = pieceValues[piece.type];
-
-      let positional = 0;
-
-      if (piece.type === "p") {
-        const advance = piece.color === "w" ? 7 - r : r;
-
-        positional += advance * 8;
-        positional += (3.5 - Math.abs(3.5 - c)) * 2;
-
-        pawns[piece.color][c].push(r);
-      }
-
-      if (piece.type === "n") {
-        positional += center * 12;
-      }
-
-      if (piece.type === "b") {
-        positional += center * 6;
-        bishops[piece.color]++;
-      }
-
-      if (piece.type === "q") {
-        positional += center * 2;
-      }
-
-     if (piece.type === "r") {
-  rooks[piece.color].push({ r, c });
-}
-
-      if (piece.type === "k") {
-        kings[piece.color] = { r, c };
-      } else if (piece.type !== "p") {
-        nonPawnMaterial += value;
-      }
-
-      score += sign * (value + positional);
-    }
-  }
-
-  for (const color of ["w", "b"]) {
-    const sign = color === "w" ? 1 : -1;
-
-    for (const rook of rooks[color]) {
-      const ownPawns = pawns[color][rook.c];
-      const enemy = color === "w" ? "b" : "w";
-      const enemyPawns = pawns[enemy][rook.c];
-
-      if (!ownPawns.length && !enemyPawns.length) {
-        score += sign * 18;
-      } else if (!ownPawns.length) {
-        score += sign * 9;
-      }
-
-      if (
-        (color === "w" && rook.r === 1) ||
-        (color === "b" && rook.r === 6)
-      ) {
-        score += sign * 20;
-      }
-    }
-  }
-
-  for (const color of ["w", "b"]) {
-    const sign = color === "w" ? 1 : -1;
-    const enemy = color === "w" ? "b" : "w";
-
-    for (let file = 0; file < 8; file++) {
-      const ownPawns = pawns[color][file];
-
-      if (ownPawns.length > 1) {
-        score -= sign * (ownPawns.length - 1) * 14;
-      }
-
-      for (const rank of ownPawns) {
-        const hasNeighbor =
-          (file > 0 && pawns[color][file - 1].length > 0) ||
-          (file < 7 && pawns[color][file + 1].length > 0);
-
-        if (!hasNeighbor) {
-          score -= sign * 10;
-        }
-
-        let passed = true;
-
-        for (
-          let enemyFile = Math.max(0, file - 1);
-          enemyFile <= Math.min(7, file + 1);
-          enemyFile++
-        ) {
-          for (const enemyRank of pawns[enemy][enemyFile]) {
-            const enemyAhead =
-              color === "w"
-                ? enemyRank < rank
-                : enemyRank > rank;
-
-            if (enemyAhead) {
-              passed = false;
-            }
-          }
-        }
-
-        if (passed) {
-          const advance = color === "w" ? 7 - rank : rank;
-          score += sign * (20 + advance * advance * 5);
-        }
-      }
-    }
-
-    if (bishops[color] >= 2) {
-      score += sign * 28;
-    }
-
-    
-  }
-
-  const endgame = nonPawnMaterial < 2600;
-
-  for (const color of ["w", "b"]) {
-    const king = kings[color];
-    if (!king) continue;
-
-    const sign = color === "w" ? 1 : -1;
-    const center = 6 -
-      Math.abs(3.5 - king.r) -
-      Math.abs(3.5 - king.c);
-
-    if (endgame) {
-      score += sign * center * 12;
-    } else {
-      score -= sign * Math.max(0, center) * 8;
-
-      const castled =
-        (color === "w" && king.r === 7 &&
-          (king.c === 2 || king.c === 6)) ||
-        (color === "b" && king.r === 0 &&
-          (king.c === 2 || king.c === 6));
-
-      if (castled) {
-        score += sign * 20;
-      }
-    }
-  }
-
-  if (game.isCheck()) {
-    score += game.turn() === "w" ? -25 : 25;
-  }
-
-  return score;
-}
-
-function evaluateForSideToMove(ply = 0) {
-  if (game.isCheckmate()) {
-    return -MATE_SCORE + ply;
-  }
-
-  if (game.isDraw()) {
-    return 0;
-  }
-
-  const whiteScore = evaluatePosition();
-
-  return game.turn() === "w"
-    ? whiteScore
-    : -whiteScore;
-}
-
-function movePriority(move) {
-  let score = 0;
-
-  if (move.captured) {
-    score += 100000 +
-      (pieceValues[move.captured] || 0) * 10 -
-      (pieceValues[move.piece] || 0);
-  }
-
-  if (move.promotion) {
-    score += 80000 + (pieceValues[move.promotion] || 0);
-  }
-
-  if (move.san?.includes("+")) {
-    score += 5000;
-  }
-
-  if (move.san?.includes("#")) {
-    score += 1000000;
-  }
-
-  return score;
-}
-
-function orderMoves(moves) {
-  return moves.sort(
-    (a, b) => movePriority(b) - movePriority(a)
-  );
-}
-
-function shouldStopSearch(ctx) {
-  if (ctx.stopped) return true;
-
-  if (
-    ctx.nodes >= ctx.maxNodes ||
-    performance.now() >= ctx.deadline
-  ) {
-    ctx.stopped = true;
-  }
-
-  return ctx.stopped;
-}
-
-function quiescenceSearch(alpha, beta, ply, ctx, remaining = 5) {
-  if (shouldStopSearch(ctx)) {
-    return evaluateForSideToMove(ply);
-  }
-
-  ctx.nodes++;
-
-  if (game.isCheckmate()) {
-    return -MATE_SCORE + ply;
-  }
-
-  if (game.isDraw()) {
-    return 0;
-  }
-
-  const inCheck = game.isCheck();
-  const standPat = evaluateForSideToMove(ply);
-
-  if (remaining <= -2) {
-    return standPat;
-  }
-
-  if (!inCheck) {
-    if (standPat >= beta) return beta;
-
-    alpha = Math.max(alpha, standPat);
-
-    if (remaining <= 0) {
-      return alpha;
-    }
-  }
-
-  let moves = game.moves({ verbose: true });
-
-  if (!inCheck) {
-    moves = moves.filter(move =>
-      move.captured || move.promotion
-    );
-  }
-
-  orderMoves(moves);
-
-  for (const move of moves) {
-    game.move({
-      from: move.from,
-      to: move.to,
-      promotion: move.promotion || "q"
+// AI search runs in a Web Worker so it cannot block board rendering.
+const aiWorker = new Worker(new URL("./ai-worker.js", import.meta.url), { type: "module" });
+let aiRequestId = 0;
+const aiRequests = new Map();
+
+aiWorker.addEventListener("message", ({ data }) => {
+  const pending = aiRequests.get(data.id);
+  if (!pending) return;
+  aiRequests.delete(data.id);
+  if (data.error) pending.reject(new Error(data.error));
+  else pending.resolve(data.result);
+});
+
+aiWorker.addEventListener("error", error => {
+  for (const pending of aiRequests.values()) pending.reject(error);
+  aiRequests.clear();
+});
+
+function requestBestMove(options = {}) {
+  const id = ++aiRequestId;
+  const positionFen = game.fen();
+  return new Promise((resolve, reject) => {
+    aiRequests.set(id, {
+      resolve: result => resolve(game.fen() === positionFen ? result : null),
+      reject
     });
-
-    let score;
-
-    try {
-      score = -quiescenceSearch(
-        -beta,
-        -alpha,
-        ply + 1,
-        ctx,
-        remaining - 1
-      );
-    } finally {
-      game.undo();
-    }
-
-    if (ctx.stopped) break;
-
-    if (score >= beta) {
-      return beta;
-    }
-
-    alpha = Math.max(alpha, score);
-  }
-
-  return alpha;
-}
-
-function negamax(depth, alpha, beta, ply, ctx) {
-  if (shouldStopSearch(ctx)) {
-    return evaluateForSideToMove(ply);
-  }
-
-  ctx.nodes++;
-
-  if (game.isCheckmate()) {
-    return -MATE_SCORE + ply;
-  }
-
-  if (game.isDraw()) {
-    return 0;
-  }
-
-  if (depth <= 0) {
-    return quiescenceSearch(alpha, beta, ply, ctx);
-  }
-
-  const originalAlpha = alpha;
-  const originalBeta = beta;
-
-  const key = game.fen();
-  const cached = ctx.table.get(key);
-
-  if (cached && cached.depth >= depth) {
-    if (cached.bound === "exact") return cached.score;
-
-    if (cached.bound === "lower") {
-      alpha = Math.max(alpha, cached.score);
-    } else if (cached.bound === "upper") {
-      beta = Math.min(beta, cached.score);
-    }
-
-    if (alpha >= beta) {
-      return cached.score;
-    }
-  }
-
-  const moves = orderMoves(game.moves({ verbose: true }));
-
-  if (!moves.length) {
-    return game.isCheck() ? -MATE_SCORE + ply : 0;
-  }
-
-  let bestScore = -SEARCH_INFINITY;
-
-  for (const move of moves) {
-    game.move({
-      from: move.from,
-      to: move.to,
-      promotion: move.promotion || "q"
-    });
-
-    let score;
-
-    try {
-      score = -negamax(
-        depth - 1,
-        -beta,
-        -alpha,
-        ply + 1,
-        ctx
-      );
-    } finally {
-      game.undo();
-    }
-
-    if (ctx.stopped) break;
-
-    bestScore = Math.max(bestScore, score);
-    alpha = Math.max(alpha, score);
-
-    if (alpha >= beta) {
-      break;
-    }
-  }
-
-  if (!ctx.stopped) {
-    let bound = "exact";
-
-    if (bestScore <= originalAlpha) {
-      bound = "upper";
-    } else if (bestScore >= originalBeta) {
-      bound = "lower";
-    }
-
-    if (ctx.table.size > 40000) {
-      ctx.table.clear();
-    }
-
-    ctx.table.set(key, {
-      depth,
-      score: bestScore,
-      bound
-    });
-  }
-
-  return bestScore;
-}
-
-function findBestMove({
-  maxDepth = 3,
-  maxMs = 500,
-  maxNodes = 30000,
-  randomTop = 1
-} = {}) {
-  const rootMoves = orderMoves(
-    game.moves({ verbose: true })
-  );
-
-  if (!rootMoves.length) return null;
-
-  const ctx = {
-    nodes: 0,
-    maxNodes,
-    deadline: performance.now() + maxMs,
-    stopped: false,
-    table: new Map()
-  };
-
-  let bestMove = rootMoves[0];
-  let bestScore = -SEARCH_INFINITY;
-  let completedResults = [];
-
-  for (let depth = 1; depth <= maxDepth; depth++) {
-    const results = [];
-    let alpha = -SEARCH_INFINITY;
-
-    for (const move of rootMoves) {
-      game.move({
-        from: move.from,
-        to: move.to,
-        promotion: move.promotion || "q"
-      });
-
-      let score;
-
-      try {
-        score = -negamax(
-          depth - 1,
-          -SEARCH_INFINITY,
-          -alpha,
-          1,
-          ctx
-        );
-      } finally {
-        game.undo();
-      }
-
-      if (ctx.stopped) break;
-
-      results.push({ move, score });
-      alpha = Math.max(alpha, score);
-    }
-
-    if (ctx.stopped || !results.length) {
-      break;
-    }
-
-    results.sort((a, b) => b.score - a.score);
-
-    completedResults = results;
-    bestMove = results[0].move;
-    bestScore = results[0].score;
-  }
-
-  const candidates = completedResults.slice(
-    0,
-    Math.min(
-      Math.max(1, randomTop),
-      completedResults.length
-    )
-  );
-
-  if (candidates.length > 1) {
-    bestMove =
-      candidates[Math.floor(Math.random() * candidates.length)].move;
-  }
-
-  return {
-    move: bestMove,
-    score: bestScore,
-    nodes: ctx.nodes
-  };
+    aiWorker.postMessage({ id, fen: positionFen, options });
+  });
 }
 
 // ==========================================
 // OPPONENT AI
 // ==========================================
 
-function makeBotMove() {
+async function makeBotMove() {
   botTimer = null;
 
   if (game.isGameOver() || game.turn() === playerColor) {
@@ -1154,12 +646,21 @@ function makeBotMove() {
 
   const depth = [0, 1, 2, 2, 3, 4][botLevel];
 
-  const result = findBestMove({
-    maxDepth: depth,
-    maxMs: botLevel >= 5 ? 750 : 500,
-    maxNodes: botLevel >= 5 ? 45000 : 30000,
-    randomTop: [0, 5, 4, 2, 1, 1][botLevel]
-  });
+  let result;
+  try {
+    result = await requestBestMove({
+      maxDepth: depth,
+      maxMs: botLevel >= 5 ? 750 : 500,
+      maxNodes: botLevel >= 5 ? 45000 : 30000,
+      randomTop: [0, 5, 4, 2, 1, 1][botLevel]
+    });
+  } catch (error) {
+    thinking = false;
+    setLia("Erro ao calcular a jogada da IA.");
+    devLog("Erro na IA: " + error.message, "ERROR");
+    updateInformation();
+    return;
+  }
 
   if (!result?.move) {
     thinking = false;
@@ -1552,17 +1053,20 @@ hideGameResult()
 }
 
 
-function showHint() {
+async function showHint() {
   if (thinking || game.turn() !== playerColor) {
     setLia("Espere sua vez para receber uma dica.");
     return;
   }
 
-  const result = findBestMove({
-    maxDepth: 3,
-    maxMs: 500,
-    maxNodes: 25000
-  });
+  let result;
+  try {
+    result = await requestBestMove({ maxDepth: 3, maxMs: 500, maxNodes: 25000 });
+  } catch (error) {
+    devLog("Erro na dica: " + error.message, "ERROR");
+    setLia("Não foi possível calcular uma dica.");
+    return;
+  }
 
   if (!result?.move) {
     setLia("Não encontrei um movimento recomendado.");
@@ -1593,7 +1097,7 @@ function showHint() {
   setLia(explanation);
 }
 
-function analyzePosition() {
+async function analyzePosition() {
   if (game.isCheckmate()) {
     setLia("A partida terminou em xeque-mate.");
     return;
@@ -1608,11 +1112,14 @@ function analyzePosition() {
     setLia("Seu rei está em xeque. Procure uma defesa imediatamente!");
   }
 
-  const result = findBestMove({
-    maxDepth: 3,
-    maxMs: 600,
-    maxNodes: 30000
-  });
+  let result;
+  try {
+    result = await requestBestMove({ maxDepth: 3, maxMs: 600, maxNodes: 30000 });
+  } catch (error) {
+    devLog("Erro na análise: " + error.message, "ERROR");
+    setLia("Não foi possível analisar esta posição.");
+    return;
+  }
 
   if (!result?.move) {
     setLia("Não foi possível analisar esta posição.");
